@@ -1,0 +1,21 @@
+# NEVER COMMIT this file - it contains your LLM API key
+backend/settings.json
+
+# local venv & caches
+backend/.venv/
+__pycache__/
+*.pyc
+
+# scan results (local data, may contain proprietary RTL)
+scans/
+
+# runtime logs & parser cache (auto-regenerated)
+backend/service.log
+backend/parser.out
+backend/parsetab.py
+
+# local test artifacts
+backend/lavd_test.json
+
+# machine-specific helper (LAN autostart)
+run_hidden.vbs

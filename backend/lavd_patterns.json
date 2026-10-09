@@ -1,0 +1,22 @@
+[
+  {
+    "cwe": "CWE-STRUCT-SEQ-COND",
+    "desc": "Conditional sequential assignment structure: an Always block whose CFG offspring contains an If statement with a nonblocking assignment (<=) descendant. Common structural element of conditional-assignment CWEs (e.g., CWE-1231 missing optional reset).",
+    "severity": "low",
+    "pattern": {
+      "Func": "Node",
+      "Params": ["Always"],
+      "Filter": {
+        "Operator": "AND",
+        "Condition": [
+          {
+            "Path": [
+              {"Func": "CFGOffspring", "Params": ["If"]},
+              {"Func": "CFGOffspring", "Params": ["<="]}
+            ]
+          }
+        ]
+      }
+    }
+  }
+]
