@@ -125,45 +125,8 @@ design; use `seccheck web` for the full UI.
 - VeriPVD line numbers are often module-level granularity (its LLM output schema)
 - `seccheck fix` calls the LLM every time (no cache) — each call costs tokens
 
-## 中文快速开始（Quick Start in Chinese）
-
-```bat
-git clone <本仓库地址> RTL-SecCheck
-cd RTL-SecCheck
-
-:: 创建 backend\.venv 并安装后端依赖（仅需执行一次）
-python -m venv backend\.venv
-backend\.venv\Scripts\python.exe -m pip install -r requirements.txt
-
-git clone https://github.com/anwen0724/VeriPVD
-git clone https://github.com/Chip-Security-Lab/VerilogLAVD
-:: 两个引擎仓库各自按其 README 建 .venv 并装依赖
-```
-
-> 若提示找不到 `python`：先安装 [Python 3.10+](https://www.python.org/downloads/)，
-> 安装时勾选 **"Add python.exe to PATH"**，再重新打开终端执行。
-
-> 依赖说明：后端本体只需 `fastapi + uvicorn + pydantic`（LLM 调用走 Python 标准库，
-> 不装 openai/requests）；`pyverilog`、`neo4j` 驱动属于两个**引擎仓库**的依赖，
-> 装在各自引擎的 venv 里即可（见上）。
-
-1. 首次双击 `start.bat`（或在 Vivado 里 `seccheck start`）会自动生成 `backend\settings.json`
-2. 用记事本打开 `backend\settings.json`，填入：VeriPVD 路径、VerilogLAVD 路径、
-   Neo4j 密码、`api_key`（LLM API Key）、`llm_model`（如 `deepseek-chat`），保存即生效
-   （网页「设置」页编辑的是同一个文件，二者等价）
-3. Neo4j Desktop 里启动数据库
-4. 浏览器打开 http://127.0.0.1:8321：「扫描」页填 RTL 目录开始检测
-5. Vivado 用户（推荐）：Tcl Console 里 `source seccheck.tcl` —— 后端未运行会**自动启动**，
-   然后 `seccheck scanproj` / `seccheck report` / `seccheck fix` 一条龙（见上表）
-
-注意：`backend/settings.json` 保存你的 API Key，**已列入 .gitignore，切勿提交**。
-
 ## Credits
 
 Built on top of [VerilogLAVD](https://github.com/Chip-Security-Lab/VerilogLAVD) (ACL 2026) and
 [VeriPVD](https://github.com/anwen0724/VeriPVD). Please cite the original papers if you use this
 tool in research.
-
-## License
-
-MIT (see the engine repos for their own licenses).
