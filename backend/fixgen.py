@@ -11,8 +11,13 @@ import os
 import shutil
 import subprocess
 import tempfile
+import threading
 import urllib.request
+from concurrent.futures import Future
 from pathlib import Path
+from urllib.parse import quote
+
+from llm_providers import BASE_URLS, provider_of
 
 
 def _resolve_iverilog(settings: dict | None) -> str | None:
@@ -22,47 +27,57 @@ def _resolve_iverilog(settings: dict | None) -> str | None:
         return p
     return shutil.which("iverilog")
 
-# openai 兼容的 base_url 映射（claude/gemini 原生协议不同，暂走兼容网关或提示）
-_BASE_URLS = {
-    "deepseek": "https://api.deepseek.com/v1",
-    "qwen": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-    "gpt": "https://api.openai.com/v1",
-    "glm": "https://open.bigmodel.cn/api/paas/v4",
-    "moonshot": "https://api.moonshot.cn/v1",
-}
-
-
 def _base_url(model: str) -> str:
-    m = (model or "").lower()
-    for k, v in _BASE_URLS.items():
-        if m.startswith(k):
-            return v
-    return _BASE_URLS["deepseek"]  # 自定义模型名默认按 deepseek 兼容网关处理
+    return BASE_URLS[provider_of(model)]
 
 
 def llm_chat(prompt: str, settings: dict, timeout: int = 180, lang: str = "zh") -> str:
     """调用 openai 兼容 chat API，返回文本。lang 控制回答语言（Tcl 控制台只能显示 ASCII，走 en）。"""
     key = settings.get("api_key") or ""
     model = settings.get("llm_model") or "deepseek-chat"
-    base = settings.get("llm_base_url") or _base_url(model)
+    provider = provider_of(model)
+    custom_base = settings.get("llm_base_url")
+    base = (custom_base or BASE_URLS[provider]).rstrip("/")
     sysmsg = ("你是硬件安全专家，精通 Verilog RTL 漏洞修复。回答用中文，"
               "代码用 ```verilog 代码块。输出紧凑，不要客套话。" if lang == "zh" else
               "You are a hardware security expert specializing in Verilog RTL vulnerability "
               "fixes. Answer in ENGLISH, use ```verilog code blocks. Be compact, no pleasantries.")
-    body = json.dumps({
-        "model": model,
-        "messages": [
+    headers = {"Content-Type": "application/json"}
+    # An explicitly configured custom endpoint retains its existing OpenAI-compatible protocol.
+    if provider == "claude" and not custom_base:
+        endpoint = base + "/messages"
+        headers.update({"x-api-key": key, "anthropic-version": "2023-06-01"})
+        payload = {"model": model, "system": sysmsg, "max_tokens": 4096,
+                   "messages": [{"role": "user", "content": prompt}]}
+    elif provider == "gemini" and not custom_base:
+        endpoint = f"{base}/models/{quote(model, safe='')}:generateContent"
+        headers["x-goog-api-key"] = key
+        payload = {"systemInstruction": {"parts": [{"text": sysmsg}]},
+                   "contents": [{"role": "user", "parts": [{"text": prompt}]}]}
+    else:
+        endpoint = base + "/chat/completions"
+        headers["Authorization"] = f"Bearer {key}"
+        payload = {"model": model, "messages": [
             {"role": "system", "content": sysmsg},
-            {"role": "user", "content": prompt},
-        ],
-        "temperature": 0.2,
-    }).encode("utf-8")
+            {"role": "user", "content": prompt}]}
+        if provider != "gpt":
+            payload["temperature"] = 0.2
+    body = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
-        f"{base.rstrip('/')}/chat/completions", data=body,
-        headers={"Content-Type": "application/json", "Authorization": f"Bearer {key}"})
+        endpoint, data=body, headers=headers)
     with urllib.request.urlopen(req, timeout=timeout) as r:
         data = json.loads(r.read().decode("utf-8"))
-    return data["choices"][0]["message"]["content"]
+    if provider == "claude" and not custom_base:
+        text = "\n".join(p.get("text", "") for p in data.get("content", []) if p.get("type") == "text")
+    elif provider == "gemini" and not custom_base:
+        text = "\n".join(p.get("text", "") for p in
+                         (data.get("candidates") or [{}])[0].get("content", {}).get("parts", [])
+                         if not p.get("thought"))
+    else:
+        text = data["choices"][0]["message"].get("content")
+    if not isinstance(text, str) or not text.strip():
+        raise RuntimeError("模型未返回文字建议，请重试或检查模型配置")
+    return text
 
 
 # ---------------- 代码上下文 ----------------
@@ -166,10 +181,42 @@ Simulation verification for this vulnerability class: give a testbench stimulus/
 """
 
 
+_STATE_LOCK = threading.Lock()
+_REPORT_LOCKS: dict[str, threading.Lock] = {}
+_INFLIGHT: dict[tuple[str, str, str], Future] = {}
+
+
 def generate_fix(scan_dir: str, scan_id: str, finding_id: str, settings: dict, lang: str = "zh") -> dict:
+    """Coalesce simultaneous requests for the same finding; failed calls remain retryable."""
+    report_path = str((Path(scan_dir) / "report.json").resolve())
+    key = (report_path, finding_id, lang)
+    with _STATE_LOCK:
+        report_lock = _REPORT_LOCKS.setdefault(report_path, threading.Lock())
+        future = _INFLIGHT.get(key)
+        owner = future is None
+        if owner:
+            future = Future()
+            _INFLIGHT[key] = future
+    if not owner:
+        return future.result()
+    try:
+        result = _generate_fix(scan_dir, scan_id, finding_id, settings, lang, report_lock)
+        future.set_result(result)
+        return result
+    except BaseException as e:
+        future.set_exception(e)
+        raise
+    finally:
+        with _STATE_LOCK:
+            _INFLIGHT.pop(key, None)
+
+
+def _generate_fix(scan_dir: str, scan_id: str, finding_id: str, settings: dict,
+                  lang: str, report_lock) -> dict:
     """lang: zh=网页用中文; en=Vivado Tcl 控制台用（其控制台无法显示非 ASCII）。"""
     rep_fp = Path(scan_dir) / "report.json"
-    rep = json.loads(rep_fp.read_text(encoding="utf-8"))
+    with report_lock:
+        rep = json.loads(rep_fp.read_text(encoding="utf-8"))
     finding = next((f for f in rep["findings"] if f.get("id") == finding_id), None)
     if finding is None:
         raise LookupError(f"finding {finding_id} 不存在")
@@ -190,5 +237,22 @@ def generate_fix(scan_dir: str, scan_id: str, finding_id: str, settings: dict, l
     # 每条 finding 独立跑 iverilog 基线（同一工程结果一致，但附带 finding 专项验证步骤）
     if not finding.get("verification") or finding["verification"].get("status") in (None, "pending"):
         finding["verification"] = iverilog_baseline(rtl, settings)
-    rep_fp.write_text(json.dumps(rep, ensure_ascii=False, indent=2), encoding="utf-8")
-    return finding
+    # The LLM and compiler run outside the lock. Merge into the latest report, then replace
+    # atomically so concurrent fixes and report readers never observe a partial JSON file.
+    with report_lock:
+        latest = json.loads(rep_fp.read_text(encoding="utf-8"))
+        current = next((f for f in latest["findings"] if f.get("id") == finding_id), None)
+        if current is None:
+            raise LookupError(f"finding {finding_id} 不存在")
+        current.update(fix_suggestion=text, verification=finding.get("verification"))
+        temporary = None
+        try:
+            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=rep_fp.parent,
+                                             prefix=".report-", suffix=".tmp", delete=False) as tmp:
+                temporary = tmp.name
+                json.dump(latest, tmp, ensure_ascii=False, indent=2)
+            os.replace(temporary, rep_fp)
+        finally:
+            if temporary and os.path.exists(temporary):
+                os.unlink(temporary)
+    return current

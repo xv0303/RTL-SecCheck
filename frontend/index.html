@@ -105,10 +105,19 @@
             <select id="histSel" onchange="loadHistory()"><option value="">—</option></select></div>
         </div>
         <div class="row">
-          <label class="card" style="flex:1;margin:0;cursor:pointer;display:flex;gap:8px;align-items:center">
-            <input type="checkbox" id="engPvd" checked><span><b>VeriPVD 权限流分析</b><br><small class="muted">需 API Key 才能启用 LLM 环节</small></span></label>
-          <label class="card" style="flex:1;margin:0;cursor:pointer;display:flex;gap:8px;align-items:center">
-            <input type="checkbox" id="engLavd" checked><span><b>VerilogLAVD CWE 检测</b><br><small class="muted">需 Neo4j / 预置检测结果</small></span></label>
+          <div class="field" style="flex:1">
+            <label>检测引擎</label>
+            <select id="engineSelect" onchange="updateEngineUi()">
+              <option value="both">双引擎检测（VerilogLAVD + VeriPVD）</option>
+              <option value="lavd">仅 VerilogLAVD（CWE 结构检测）</option>
+              <option value="pvd">仅 VeriPVD（权限流分析）</option>
+            </select>
+            <small class="muted" id="engineHint" style="display:block;margin-top:6px"></small>
+            <div id="engState" style="margin-top:6px;font-size:12.5px;line-height:1.9">
+              <div id="engLavdState"></div>
+              <div id="engPvdState"></div>
+            </div>
+          </div>
         </div>
         <div style="margin-top:14px"><button class="btn primary" id="scanBtn" onclick="startScan()">▶ 开始扫描</button></div>
         <div class="progress-bar" id="progWrap" style="display:none"><div class="progress-fill" id="progFill"></div></div>
@@ -120,6 +129,7 @@
     <div class="page" id="page-report">
       <h2>检测报告 <span class="fid" id="repScanId"></span></h2>
       <p class="sub" id="repSummary"></p>
+      <div class="pill-tabs" id="engineSummary" style="margin-bottom:10px"></div>
       <div class="card" style="padding:6px 12px">
         <table>
           <thead><tr><th>ID</th><th>类型</th><th>严重度</th><th>描述</th><th>位置</th><th>来源</th></tr></thead>
@@ -214,22 +224,47 @@ function go(page){document.querySelectorAll(".nav-item").forEach(n=>n.classList.
 document.querySelectorAll(".nav-item").forEach(n=>n.onclick=()=>go(n.dataset.page));
 
 /* ============ 环境状态 ============ */
+const ENV = {ok:false, nb:false, key:false};
+function engineSel(){return document.getElementById("engineSelect").value;}   // both | lavd | pvd
+function updateEngineUi(){
+  const v=engineSel(), hasL=v!=="pvd", hasP=v!=="lavd";
+  document.getElementById("engineHint").textContent =
+    v==="both" ? "双引擎：VerilogLAVD 做确定性 CWE 图模式检测，VeriPVD 做 LLM 权限流分析，结果在报告中按来源分列。"
+    : v==="lavd" ? "仅 VerilogLAVD：13 类 CWE 结构化图遍历检测，无需 API Key，依赖 Neo4j。"
+    : "仅 VeriPVD：权限流分析（LLM 环节需 API Key，未配置时自动降级为规则模式）。";
+  const ls=document.getElementById("engLavdState"), ps=document.getElementById("engPvdState");
+  if(!ENV.ok){ls.innerHTML="";ps.innerHTML="";return;}
+  ls.innerHTML = hasL ? (ENV.nb
+      ? `✔ VerilogLAVD 就绪（Neo4j 已连接）`
+      : `✗ <b style="color:#dc2626">VerilogLAVD 未就绪</b> — Neo4j 未启动，本次扫描该引擎将走降级路径（缓存结果或跳过）`)
+    : `<span style="opacity:.45">— VerilogLAVD 本次不运行</span>`;
+  ps.innerHTML = hasP ? (ENV.key
+      ? `✔ VeriPVD 就绪（API Key 已配置，LLM 环节启用）`
+      : `⚠ <b style="color:#d97706">VeriPVD 部分就绪</b> — 未配置 API Key，LLM 筛选/分析环节将跳过（规则模式）`)
+    : `<span style="opacity:.45">— VeriPVD 本次不运行</span>`;
+  ls.style.color = (hasL && !ENV.nb) ? "#b45309" : "#166534";
+  ps.style.color = (hasP && !ENV.key) ? "#b45309" : "#166534";
+  // 横幅联动: 只提示所选引擎相关的未就绪项
+  const nbB=document.getElementById("envBanner");
+  nbB.className="env-banner "+(ENV.nb?"ok":"");
+  nbB.innerHTML = ENV.nb
+    ? "✔ <span><b>Neo4j 已连接</b> — CWE 图检测引擎就绪</span>"
+    : "⚠ <span><b>未检测到 Neo4j</b> — CWE 引擎将使用降级路径（缓存结果或跳过）。可在设置页配置连接。</span>";
+  nbB.style.display = hasL ? "flex" : "none";
+  const kb=document.getElementById("keyBanner");
+  kb.innerHTML = "🔑 <span><b>尚未配置 LLM API Key</b> — 扫描时 VeriPVD 的 LLM 目标筛选与漏洞分析环节将被直接跳过，可能漏检部分跨模块权限漏洞。建议先到设置页配置。</span>"
+    + '<a onclick="go(\'settings\')">去配置 →</a>';
+  kb.className="env-banner red";
+  kb.style.display = (hasP && !ENV.key) ? "flex" : "none";
+}
 async function refreshEnv(){
   try{
     const d=await jget("/api/settings");
-    const nb=d.neo4j_alive, key=d.has_api_key;
-    document.getElementById("envBanner").className="env-banner "+(nb?"ok":"");
-    document.getElementById("envBanner").innerHTML = nb
-      ? "✔ <span><b>Neo4j 已连接</b> — CWE 图检测引擎就绪</span>"
-      : "⚠ <span><b>未检测到 Neo4j</b> — CWE 引擎将使用降级路径（缓存结果或跳过）。可在设置页配置连接。</span>";
-    document.getElementById("keyBanner").innerHTML = key
-      ? "✔ <span><b>LLM API Key 已配置</b> — VeriPVD 将启用 LLM 筛选与分析</span>"
-      : "🔑 <span><b>尚未配置 LLM API Key</b> — 扫描时 VeriPVD 的 LLM 目标筛选与漏洞分析环节将被直接跳过，可能漏检部分跨模块权限漏洞。建议先到设置页配置。</span>"
-        + '<a onclick="go(\'settings\')">去配置 →</a>';
-    document.getElementById("keyBanner").style.display = key ? "none" : "flex";
+    ENV.ok=true; ENV.nb=d.neo4j_alive; ENV.key=d.has_api_key;
     document.getElementById("envFoot").innerHTML =
-      `后端 运行中<br>Neo4j ${nb?"✓":"✗"} · API Key ${key?"✓":"✗"}`;
+      `后端 运行中<br>Neo4j ${ENV.nb?"✓":"✗"} · API Key ${ENV.key?"✓":"✗"}`;
   }catch(e){
+    ENV.ok=false;
     document.getElementById("envFoot").innerHTML = "<span style='color:#f87171'>后端未连接</span>";
     document.getElementById("envBanner").className = "env-banner red";
     document.getElementById("envBanner").style.display = "flex";
@@ -237,6 +272,7 @@ async function refreshEnv(){
       "✖ <span><b>无法连接后端</b> — 当前页面地址不是应用地址。请用浏览器打开 <b>http://127.0.0.1:8321</b>（不要用预览/静态地址）。</span>";
     document.getElementById("keyBanner").style.display = "none";
   }
+  updateEngineUi();
 }
 
 /* ============ 设置 ============ */
@@ -272,7 +308,8 @@ let pollTimer=null;
 async function startScan(){
   const dir=document.getElementById("rtlDir").value.trim();
   if(!dir){alert("请填写 RTL 目录路径");return;}
-  const b={rtl_dir:dir,engines:{lavd:document.getElementById("engLavd").checked,pvd:document.getElementById("engPvd").checked}};
+  const v=engineSel();   // 下拉映射: both → 双引擎, lavd → 仅LAVD, pvd → 仅PVD
+  const b={rtl_dir:dir,engines:{lavd:v!=="pvd",pvd:v!=="lavd"}};
   try{
     const d=await jpost("/api/scan",b);
     document.getElementById("progWrap").style.display="block";
@@ -303,24 +340,56 @@ async function loadHistory(){
 
 /* ============ 报告 ============ */
 function sevTag(s){return `<span class="tag ${s}">${s==="high"?"高危":s==="medium"?"中危":"低危"}</span>`;}
+let SRC_FILTER="all";   // all | veriloglavd | veripvd
+function engLabel(e){if(!e)return"";const l=!!e.lavd,p=!!e.pvd;if(l&&p)return"双引擎";if(l)return"仅LAVD";if(p)return"仅PVD";return"";}
+function setSrcFilter(v){SRC_FILTER=v;renderReport();}
+function renderEngineSummary(){
+  const box=document.getElementById("engineSummary");
+  const fs=CURRENT.findings||[];
+  const by={veriloglavd:fs.filter(f=>f.source==="veriloglavd").length,
+            veripvd:fs.filter(f=>f.source==="veripvd").length,
+            other:fs.filter(f=>f.source!=="veriloglavd"&&f.source!=="veripvd").length};
+  // 旧报告无 engines 字段时回退: 有该来源 finding 即视为运行过
+  const eng=CURRENT.engines||{lavd:by.veriloglavd>0,pvd:by.veripvd>0};
+  const lavdRan=eng.lavd!==false, pvdRan=eng.pvd!==false;
+  let chips="";
+  chips+=`<span class="pill" style="cursor:default">VerilogLAVD · ${lavdRan?by.veriloglavd+" 条":"未运行"}</span>`;
+  chips+=`&nbsp;<span class="pill" style="cursor:default">VeriPVD · ${pvdRan?by.veripvd+" 条":"未运行"}</span>`;
+  if(by.other)chips+=`&nbsp;<span class="pill" style="cursor:default">其他来源 · ${by.other} 条</span>`;
+  let pills="";
+  if(lavdRan&&pvdRan){
+    pills=` <span style="color:var(--muted);font-size:12px">来源：</span>`
+      +["all","veriloglavd","veripvd"].map(v=>
+        `<span class="pill ${SRC_FILTER===v?"on":""}" style="cursor:pointer" onclick="setSrcFilter('${v}')">${v==="all"?"全部":v==="veriloglavd"?"VerilogLAVD":"VeriPVD"}</span>`).join(" ");
+  }
+  box.innerHTML=chips+pills;
+}
 function renderReport(){
-  document.getElementById("repScanId").textContent=CURRENT.scan_id?("· "+CURRENT.scanId||CURRENT.scan_id):"";
   document.getElementById("repScanId").textContent=CURRENT.scan_id?("· "+CURRENT.scan_id):"";
   const s=CURRENT.summary||{total:CURRENT.findings.length,high:CURRENT.findings.filter(f=>f.severity==="high").length};
-  document.getElementById("repSummary").textContent=`目标: ${CURRENT.rtl_dir||""} — 共 ${s.total} 条发现（高危 ${s.high}）`;
+  const be=(s.by_engine||{});
+  const engPart = (be.veriloglavd!==undefined)
+    ? ` · VerilogLAVD ${be.veriloglavd} 条 · VeriPVD ${be.veripvd} 条` : "";
+  document.getElementById("repSummary").textContent=
+    `目标: ${CURRENT.rtl_dir||""} — 共 ${s.total} 条发现（高危 ${s.high}）${engPart}${engLabel(CURRENT.engines)?" · 模式: "+engLabel(CURRENT.engines):""}`;
+  renderEngineSummary();
   const tb=document.getElementById("findingRows");tb.innerHTML="";
+  const shown=CURRENT.findings.filter(f=>SRC_FILTER==="all"||f.source===SRC_FILTER);
   if(!CURRENT.findings.length){
+    const eng=CURRENT.engines;
+    let hint;
+    if(eng&&eng.lavd&&!eng.pvd)hint="本次仅运行了 VerilogLAVD：未产生 CWE 结构命中。可能该工程不含已知模式的漏洞结构，或代码风格与模式词表（lock/key/debug 等命名族）不一致。";
+    else if(eng&&eng.pvd&&!eng.lavd)hint="本次仅运行了 VeriPVD：未产生权限流发现。可能不存在跨模块权限问题，或 LLM 环节被跳过（未配置 API Key）导致漏检——建议配置后重扫。";
+    else hint="双引擎均未产生发现。若未配置 API Key，VeriPVD 的 LLM 环节被跳过；VerilogLAVD 依赖 Neo4j 建图，未启动时走降级路径。";
     const wm=(CURRENT.warnings||[]).map(w=>"• "+esc(w)).join("<br>");
     tb.innerHTML=`<tr><td colspan="6" style="padding:24px;text-align:center;color:var(--muted)">
       <b>本次扫描未产生发现</b><br><br>
-      常见原因：<br>
-      ${wm?("• "+wm+"<br>"):""}
-      • VeriPVD 的 LLM 模块运行失败（见扫描日志中的"报错>"行）<br>
-      • VerilogLAVD 未配置结果来源（Neo4j 管线或缓存结果文件）<br><br>
+      ${hint}<br><br>
+      ${wm?("提示：<br>"+wm+"<br>"):""}
       <span style="font-size:12px">如需排查：扫描页日志会显示每个引擎模块的详细报错。</span>
     </td></tr>`;
   }
-  CURRENT.findings.forEach(f=>{
+  shown.forEach(f=>{
     const tr=document.createElement("tr");tr.className="finding";
     const loc=(f.location&&f.location[0])?`${f.location[0].file}${f.location[0].line?":"+f.location[0].line:""}`:"—";
     tr.innerHTML=`<td class="fid">${esc(f.id)}</td><td><b>${esc(f.type)}</b></td><td>${sevTag(f.severity)}</td>
@@ -494,7 +563,8 @@ function showGraphNode(id){
   loadSettings().catch(()=>{});
   try{const h=await jget("/api/scans");
     const sel=document.getElementById("histSel");
-    h.scans.forEach(s=>{const o=document.createElement("option");o.value=s.scan_id;o.textContent=`${s.scan_id} (${s.total})`;sel.appendChild(o);});
+    h.scans.forEach(s=>{const o=document.createElement("option");o.value=s.scan_id;
+      o.textContent=`${s.scan_id} (${s.total}${s.engines?" · "+engLabel(s.engines):""})`;sel.appendChild(o);});
   }catch(e){}
   // Vivado Tcl 插件入口: /?scan=S-xxx&page=graph|report → 自动加载并跳页
   const qs=new URLSearchParams(location.search);

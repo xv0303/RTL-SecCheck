@@ -1,0 +1,117 @@
+{
+  "name": "csl-rtl-seccheck",
+  "displayName": "CSL_RTL_SecCheck",
+  "description": "RTL 安全检测对话式侧边栏 —— 扫描、报告、修复建议全部在面板内闭环，不弹任何系统弹窗。",
+  "version": "0.1.1",
+  "publisher": "csl-local",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xv0303/RTL-SecCheck.git"
+  },
+  "homepage": "https://github.com/xv0303/RTL-SecCheck",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Linters",
+    "Other"
+  ],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onView:cslRtlSeccheck.panel"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "cslRtlSeccheck",
+          "title": "CSL_RTL_SecCheck",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "cslRtlSeccheck": [
+        {
+          "id": "cslRtlSeccheck.panel",
+          "name": "CSL_RTL_SecCheck",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "cslRtlSeccheck.openPanel",
+        "title": "打开面板",
+        "category": "CSL_RTL_SecCheck"
+      },
+      {
+        "command": "cslRtlSeccheck.scan",
+        "title": "扫描当前工作区",
+        "category": "CSL_RTL_SecCheck"
+      },
+      {
+        "command": "cslRtlSeccheck.toggleSettings",
+        "title": "连接与扫描设置",
+        "category": "CSL_RTL_SecCheck",
+        "icon": "$(gear)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "cslRtlSeccheck.toggleSettings",
+          "when": "view == cslRtlSeccheck.panel",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "CSL_RTL_SecCheck",
+      "properties": {
+        "cslRtlSeccheck.engine": {
+          "type": "string",
+          "enum": [
+            "both",
+            "lavd",
+            "pvd"
+          ],
+          "enumDescriptions": [
+            "双引擎（VerilogLAVD + VeriPVD）",
+            "仅 VerilogLAVD（CWE 结构化检测）",
+            "仅 VeriPVD（权限流分析）"
+          ],
+          "default": "both",
+          "description": "扫描使用的检测引擎。仅作为侧边栏引擎下拉的初始档位；面板内的切换不回写此设置。"
+        },
+        "cslRtlSeccheck.backendUrl": {
+          "type": "string",
+          "default": "http://127.0.0.1:8321",
+          "description": "RTL-SecCheck 后端地址。"
+        },
+        "cslRtlSeccheck.veripvdPath": {
+          "type": "string",
+          "default": "",
+          "description": "VeriPVD 引擎仓库路径。非空时会在面板就绪后同步到后端的 veripvd_path 设置。"
+        },
+        "cslRtlSeccheck.projectRoot": {
+          "type": "string",
+          "default": "",
+          "description": "RTL-SecCheck 项目根目录（含 backend/ 与 start.bat）。留空则自动探测：先看扩展安装位置，再看当前工作区。"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "^2.22.0",
+    "typescript": "^5.4.0"
+  }
+}

@@ -14,21 +14,7 @@ import subprocess
 import sys
 
 from unify import from_veriloglavd, from_veripvd
-
-
-def _provider_of(model: str) -> str:
-    m = (model or "").lower()
-    if m.startswith("deepseek"):
-        return "deepseek"
-    if m.startswith("qwen"):
-        return "qwen"
-    if m.startswith("gpt") or m.startswith("o1") or m.startswith("o3"):
-        return "gpt"
-    if m.startswith("claude"):
-        return "claude"
-    if m.startswith("gemini"):
-        return "gemini"
-    return "deepseek"
+from llm_providers import provider_of as _provider_of
 
 
 def _run(cmd: list[str], cwd: str | None, env_extra: dict | None = None, timeout: int = 1800):
@@ -121,9 +107,9 @@ def run_veripvd(rtl_dir: str, scan_dir: str, settings: dict, api_key: str | None
                 n += len(got)
                 logs.append(f"[VeriPVD] parsed {os.path.relpath(fp, scan_dir)} -> {len(got)} findings")
         except Exception as e:  # noqa: BLE001
-            warnings.append(f"解析 {os.path.relpath(fp, scan_dir)} 失败: {e}")
+            warnings.append(f"failed to parse {os.path.relpath(fp, scan_dir)}: {e}")
     if n == 0 and api_key:
-        warnings.append("未找到 final_findings.json（vulnerability_analysis 可能未产出结果，见上方模块日志）")
+        warnings.append("final_findings.json not found (vulnerability_analysis may have produced no result, see module logs above)")
     return findings, logs + warnings
 
 
@@ -159,13 +145,20 @@ def run_veriloglavd(rtl_dir: str, scan_dir: str, settings: dict):
                     logs.append(f"[VerilogLAVD] parsed {len(findings)} findings")
                     return findings, logs
         except Exception as e:  # noqa: BLE001
-            warnings.append(f"VerilogLAVD 子进程调用失败: {e}")
+            warnings.append(f"VerilogLAVD subprocess call failed: {e}")
 
     # 方式 A2: 默认桥接器 — VeriPG 建图 + 图遍历模式检测（复用仓库 venv 与 Neo4j 配置）
     bridge = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lavd_bridge.py")
     if os.path.isfile(bridge):
         out_fp = os.path.join(scan_dir, "lavd_out.json")
         cmd = [py, bridge, "--rtl-dir", rtl_dir, "--out", out_fp, "--lavd", base]
+        # Neo4j 连接信息统一以 settings.json 为准：不传 --uri 时桥接器会退回
+        # VerilogLAVD 仓库 run_detection.py 里写死的 URI（默认 7687），
+        # 与徽章探测用的 neo4j_uri 不一致会出现「徽章绿但 0 findings」。
+        if settings.get("neo4j_uri"):
+            cmd += ["--uri", settings["neo4j_uri"]]
+        if settings.get("neo4j_user"):
+            cmd += ["--user", settings["neo4j_user"]]
         if settings.get("neo4j_password"):
             cmd += ["--password", settings["neo4j_password"]]
         rc, out = _run(cmd, cwd=base, timeout=3600,
@@ -182,6 +175,7 @@ def run_veriloglavd(rtl_dir: str, scan_dir: str, settings: dict):
                             items.append({
                                 "cwe": pr.get("cwe", "unknown"),
                                 "description": pr.get("desc") or pr.get("cwe", ""),
+                                "description_en": pr.get("desc_en") or "",  # Tcl 控制台（ASCII）用
                                 "severity": pr.get("severity", "medium"),
                                 "files": [{"file": fe["file"],
                                            "line": int(hit.get("lineno") or 0),
@@ -194,9 +188,9 @@ def run_veriloglavd(rtl_dir: str, scan_dir: str, settings: dict):
                 logs.append(f"[VerilogLAVD] graph+patterns done: {ok_files}/{len(raw.get('files', []))} files -> {len(got)} hits")
                 return findings, logs
             except Exception as e:  # noqa: BLE001
-                warnings.append(f"VerilogLAVD 结果解析失败: {e}")
+                warnings.append(f"VerilogLAVD result parsing failed: {e}")
         elif rc != 0:
-            warnings.append("VerilogLAVD 桥接器运行失败（检查 Neo4j 是否启动、密码是否正确）")
+            warnings.append("VerilogLAVD bridge run failed (check that Neo4j is running and the password is correct)")
 
     # 方式 B: 降级 —— 读取用户在设置里指定的"最近一次检测结果文件"
     cached = settings.get("verilavlvd_last_result")
@@ -207,7 +201,7 @@ def run_veriloglavd(rtl_dir: str, scan_dir: str, settings: dict):
             logs.append(f"[VerilogLAVD] using cached result file: {cached} -> {len(findings)} findings")
             return findings, logs
         except Exception as e:  # noqa: BLE001
-            warnings.append(f"VerilogLAVD 结果文件解析失败: {e}")
+            warnings.append(f"VerilogLAVD cached result file parsing failed: {e}")
 
-    warnings.append("VerilogLAVD 未能产出结果（需 Neo4j + pyverilog 环境，或配置 verilavlvd_entry / verilavlvd_last_result）")
+    warnings.append("VerilogLAVD produced no result (needs Neo4j + pyverilog, or set verilavlvd_entry / verilavlvd_last_result)")
     return findings, logs + warnings

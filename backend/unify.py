@@ -21,6 +21,7 @@ def blank(**kw) -> dict:
         "type": kw.get("type", "unknown"),          # CWE-xxxx | permission-bypass | ...
         "severity": kw.get("severity", "medium"),   # high | medium | low
         "description": kw.get("description", ""),
+        "description_en": kw.get("description_en", ""),  # Tcl 控制台（纯 ASCII）回退用
         "location": kw.get("location", []),         # [{file, line}]
         "evidence": kw.get("evidence", []),         # 图遍历路径 / 权限链步骤
         "fix_suggestion": kw.get("fix_suggestion", ""),
@@ -156,6 +157,7 @@ def from_veriloglavd(raw: Any) -> list[dict]:
             type=cwe,
             severity=_SEV_MAP.get(str(_pick(it, "severity", "level") or "medium").lower(), "medium"),
             description=str(_pick(it, "description", "detail", "message", "reason") or cwe),
+            description_en=str(_pick(it, "description_en", "desc_en") or ""),
             location=locs,
             evidence=_pick(it, "path", "traversal_path", "evidence") or [],
         ))

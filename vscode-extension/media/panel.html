@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy"
+      content="default-src 'none'; img-src {{cspSource}} data:; style-src {{cspSource}} 'unsafe-inline'; script-src 'nonce-{{nonce}}';">
+<link href="{{cssUri}}" rel="stylesheet">
+<title>CSL_RTL_SecCheck</title>
+</head>
+<body>
+<div class="panel">
+
+  <!-- 固定头部（不随消息流滚动）：扫描目录 / 引擎 / 依赖提示 / 启动扫描。
+       原来的底部操作条整体上移到顶部 -->
+  <header class="topbar">
+
+    <!-- 扫描目标目录：独立输入框，始终可见。回车或失焦时若有变更，
+         经宿主静默走 POST /api/settings {rtl_dir}（成功不出卡，失败才出错误卡） -->
+    <label class="dir-field" for="sRtlDir">
+      <span class="set-label">扫描目标目录</span>
+      <input type="text" id="sRtlDir" spellcheck="false" autocomplete="off"
+             placeholder="留空 = 打开面板时的目录">
+    </label>
+
+    <div class="engine-row">
+      <label class="engine-label" for="engineSel">引擎</label>
+      <select id="engineSel">
+        <option value="both">双引擎</option>
+        <option value="lavd">仅LAVD</option>
+        <option value="pvd">仅PVD</option>
+      </select>
+    </div>
+    <div class="dep-hint" id="depHint" style="display:none"></div>
+    <button type="button" id="scanBtn" class="scan-btn">▶ 启动并扫描</button>
+  </header>
+
+  <!-- 「连接与扫描设置」卡：由视图标题栏齿轮（command cslRtlSeccheck.toggleSettings）
+       经 H→W {type:"data",kind:"ui",action:"toggleSettings"} 控制开合。
+       默认收起；展开状态仅本会话有效，不持久化。卡内不包含扫描目标目录。
+       回显值由宿主推送（api_key 脱敏、密码不下发），保存走宿主转 POST /api/settings -->
+  <div class="settings-body" id="setBody" style="display:none">
+    <div class="set-title">连接与扫描设置</div>
+    <label class="set-field">
+      <span class="set-label">Neo4j URI</span>
+      <input type="text" id="sNeoUri" spellcheck="false" autocomplete="off"
+             placeholder="bolt://localhost:7687">
+    </label>
+    <!-- URI 轻量提醒（仅提醒不拦截）：非 bolt:// 前缀 / 端口 7687 时显示 -->
+    <div class="set-hint" id="sNeoUriHint" style="display:none"></div>
+    <div class="set-row2">
+      <label class="set-field">
+        <span class="set-label">Neo4j 用户名</span>
+        <input type="text" id="sNeoUser" spellcheck="false" autocomplete="off">
+      </label>
+      <label class="set-field">
+        <span class="set-label">Neo4j 密码</span>
+        <input type="password" id="sNeoPwd" spellcheck="false" autocomplete="off"
+               placeholder="未配置">
+      </label>
+    </div>
+    <label class="set-field">
+      <span class="set-label">LLM API Key（脱敏显示）</span>
+      <input type="text" id="sApiKey" spellcheck="false" autocomplete="off"
+             placeholder="未配置">
+    </label>
+    <!-- Key 支持范围提示：五家与 VeriPVD 内置 LLM 提供商一致（engines.py _provider_of），
+         后端按 llm_model 模型名选网关，Key 必须与模型同一家 -->
+    <div class="set-note">支持 DeepSeek / 通义Qwen / OpenAI GPT / Claude / Gemini 五家的
+      API Key。Key 须与后端 llm_model 指定的模型同一家（可在 backend/settings.json
+      修改）。</div>
+    <button type="button" id="setSave" class="set-save" disabled>保存设置</button>
+  </div>
+
+  <!-- 可滚动内容区：唯一滚动容器（进度卡 / 状态卡 / 报告就绪条 / 报告卡） -->
+  <main class="flow" id="flow" aria-live="polite"></main>
+
+</div>
+<script nonce="{{nonce}}" src="{{jsUri}}"></script>
+</body>
+</html>

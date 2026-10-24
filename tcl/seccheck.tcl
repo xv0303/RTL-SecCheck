@@ -6,7 +6,7 @@
 #
 #  Commands:
 #      seccheck start                        start the local backend (auto-run on load)
-#      seccheck scan  <rtl_dir> [engines]    engines: none|pvd|lavd|both
+#      seccheck scan  <rtl_dir> [engines]    engines: pvd|lavd|both (default both; "none" rejected)
 #      seccheck status [scan_id]
 #      seccheck report [scan_id]
 #      seccheck fix   <finding_id> [scan_id]
@@ -314,7 +314,7 @@ RTL-SecCheck commands (Vivado Tcl Console):
   seccheck start                       start the local backend (auto-run on load if not running)
   seccheck stop                        stop the backend started from this session
   seccheck scanproj [engines]          scan ALL sources of the current Vivado project
-  seccheck scan  <rtl_dir> [engines]   start scan; engines: none|pvd|lavd|both (default both)
+  seccheck scan  <rtl_dir> [engines]   start scan; engines: pvd|lavd|both (default both; "none" rejected)
   seccheck status [scan_id]            show scan progress / logs
   seccheck report [scan_id]            list findings (like the web report page)
   seccheck fix  <finding_id>           LLM fix suggestion (needs API key, 30-60 s)

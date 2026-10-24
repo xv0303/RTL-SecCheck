@@ -1,0 +1,511 @@
+/*
+ * 面板样式。
+ *
+ * CSS 变量与组件类（.card / .tag / .pill / .chain-step / .progress-log / .fix-panel）
+ * 沿用 frontend/index.html 的定义，但底色改用 VSCode 主题变量，这样在深色主题下
+ * 不会出现「白底黑字浮在暗色侧边栏上」的问题。语义色（严重度红/黄/蓝）保持固定。
+ *
+ * 侧边栏宽度通常只有 300~400px，所以原页面里的双列网格（.row / .detail-grid）
+ * 一律改成单列堆叠。
+ */
+
+:root {
+  --bg: var(--vscode-sideBar-background, #f5f7fa);
+  --panel: var(--vscode-editor-background, #ffffff);
+  --border: var(--vscode-panel-border, #e2e8f0);
+  --text: var(--vscode-foreground, #1a202c);
+  --muted: var(--vscode-descriptionForeground, #64748b);
+  --primary: var(--vscode-textLink-foreground, #2563eb);
+  --primary-soft: rgba(37, 99, 235, .12);
+  --green: #16a34a;
+  --green-soft: rgba(22, 163, 74, .12);
+  --orange: #d97706;
+  --orange-soft: rgba(217, 119, 6, .12);
+  --red: #dc2626;
+  --red-soft: rgba(220, 38, 38, .12);
+  --code-bg: var(--vscode-textCodeBlock-background, #0f172a);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: var(--vscode-font-family, "Segoe UI", "Microsoft YaHei", sans-serif);
+  font-size: 13px;
+  background: var(--bg);
+  color: var(--text);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ---------------- 消息流（唯一滚动区） ----------------
+   L1：固定在顶部操作条 / 设置卡之下，flex:1 吃掉剩余高度并独立滚动。
+   min-height:0 是 flex 子项能真正滚动而不是被内容撑高的关键。
+   （顶部状态徽章已删：Neo4j / API Key 状态只在依赖提示区显示） */
+
+.flow {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+/* 助手卡片通用 */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 9px 10px;
+  font-size: 12.5px;
+  line-height: 1.65;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.card-title {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+/* 状态卡（取代 showInformationMessage / showErrorMessage） */
+.status-card { border-left: 3px solid var(--primary); }
+.status-card.warn { border-left-color: var(--orange); background: var(--orange-soft); }
+.status-card.error { border-left-color: var(--red); background: var(--red-soft); }
+.status-card pre {
+  font-family: inherit;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 12.5px;
+}
+
+/* 进度卡 */
+.progress-card { border-left: 3px solid var(--primary); }
+.progress-card.done { border-left-color: var(--green); background: var(--green-soft); }
+.progress-card.error { border-left-color: var(--red); background: var(--red-soft); }
+.progress-card.cancelled { border-left-color: var(--muted); opacity: .85; }
+
+.spinner {
+  display: inline-block;
+  width: 11px; height: 11px;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.progress-bar {
+  height: 4px;
+  background: var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 7px 0 6px;
+}
+.progress-fill {
+  height: 100%;
+  width: 0;
+  background: var(--primary);
+  border-radius: 999px;
+  transition: width .35s;
+}
+
+.progress-log {
+  font-family: var(--vscode-editor-font-family, Consolas, monospace);
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--muted);
+  max-height: 170px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: rgba(127, 127, 127, .07);
+  border-radius: 5px;
+  padding: 5px 7px;
+  margin-top: 5px;
+}
+.progress-log .ok { color: var(--green); }
+.progress-log .warn { color: var(--orange); }
+.progress-log .fail { color: var(--red); }
+
+/* ---------------- finding 卡片 ---------------- */
+
+.finding-card {
+  border-left: 4px solid var(--muted);
+  padding-left: 9px;
+}
+.finding-card.high { border-left-color: var(--red); }
+.finding-card.medium { border-left-color: var(--orange); }
+.finding-card.low { border-left-color: #2563eb; }
+
+.tag {
+  display: inline-flex;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.tag.high { background: var(--red-soft); color: var(--red); }
+.tag.medium { background: var(--orange-soft); color: var(--orange); }
+.tag.low { background: var(--green-soft); color: var(--green); }
+.tag.src { background: var(--primary-soft); color: var(--primary); }
+.tag.muted { background: rgba(127,127,127,.14); color: var(--muted); }
+
+.fid { font-family: var(--vscode-editor-font-family, Consolas, monospace); font-size: 11px; color: var(--muted); }
+
+.desc { margin: 4px 0 5px; }
+
+/* 可点的「文件:行号」 */
+.loclink {
+  color: var(--primary);
+  cursor: pointer;
+  text-decoration: underline;
+  font-family: var(--vscode-editor-font-family, Consolas, monospace);
+  font-size: 11.5px;
+  word-break: break-all;
+}
+.loclink:hover { filter: brightness(1.25); }
+
+/* 折叠区 */
+.toggle {
+  display: inline-block;
+  margin-top: 6px;
+  padding: 3px 9px;
+  font-size: 11.5px;
+  font-family: inherit;
+  cursor: pointer;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+.toggle:hover { border-color: var(--primary); color: var(--primary); }
+.toggle[disabled] { opacity: .6; cursor: default; }
+
+.collapsible { display: none; margin-top: 7px; }
+.collapsible.open { display: block; }
+
+/* 证据链 */
+.chain-step {
+  display: flex;
+  gap: 7px;
+  padding: 3px 0;
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+.chain-step .n {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: #fff;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.chain-step .txt { flex: 1; word-break: break-word; }
+.chain-step.bad .n { background: var(--red); }
+
+/* 修复建议面板 */
+.fix-panel {
+  border-left: 3px solid var(--green);
+  background: var(--green-soft);
+  border-radius: 0 6px 6px 0;
+  padding: 8px 10px;
+  margin-top: 7px;
+}
+.fix-panel.fallback {
+  border-left-color: var(--orange);
+  background: var(--orange-soft);
+}
+.fix-panel h4 { font-size: 11.5px; margin-bottom: 5px; color: var(--green); }
+.fix-panel.fallback h4 { color: var(--orange); }
+.fix-body { white-space: pre-wrap; word-break: break-word; line-height: 1.75; }
+.fix-note { font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+/* ---------------- 报告就绪提示条 ---------------- */
+
+.ready-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-left: 3px solid var(--green);
+  background: var(--green-soft);
+}
+.ready-bar .ready-text { flex: 1; font-weight: 600; }
+.ready-bar .toggle { margin-top: 0; }
+
+/* ---------------- 报告卡 ---------------- */
+
+.report-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.report-head-btns { display: flex; gap: 5px; flex-shrink: 0; }
+.report-head-btns .toggle { margin-top: 0; }
+
+/* 高危摘要条（红色；每个高危编号是独立可点的 chip → 定位对应行） */
+.high-bar {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  margin: 6px 0;
+  padding: 5px 8px;
+  border: 1px solid var(--red);
+  border-radius: 6px;
+  background: var(--red-soft);
+  font-size: 11.5px;
+  line-height: 1.6;
+}
+.high-bar-text { word-break: break-word; }
+.high-bar-id {
+  color: var(--red);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.high-bar-id:hover { text-decoration: underline; }
+
+/* 行展开区 */
+.report-card tr.detail-row > td {
+  padding: 0 4px 8px;
+  border-bottom: 1px solid var(--border);
+  background: rgba(127, 127, 127, .05);
+}
+.row-detail { padding: 6px 2px 2px; }
+.row-desc { margin: 3px 0; line-height: 1.7; }
+.row-detail .toggle { margin-top: 5px; }
+.row-detail .fix-panel { margin-top: 6px; }
+
+.report-card table { width: 100%; border-collapse: collapse; }
+.report-card th {
+  text-align: left;
+  font-size: 10.5px;
+  color: var(--muted);
+  padding: 5px 4px;
+  border-bottom: 2px solid var(--border);
+  font-weight: 600;
+}
+.report-card td {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border);
+  font-size: 11.5px;
+  vertical-align: top;
+  word-break: break-word;
+}
+.report-card tr.row { cursor: pointer; }
+.report-card tr.row:hover { background: var(--primary-soft); }
+
+.pill-tabs { display: flex; flex-wrap: wrap; gap: 5px; margin: 6px 0; }
+.pill {
+  padding: 2px 9px;
+  border-radius: 999px;
+  background: transparent;
+  border: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text);
+  font-family: inherit;
+}
+.pill.clickable { cursor: pointer; }
+.pill.on { background: var(--primary); color: #fff; border-color: var(--primary); }
+
+.report-summary { color: var(--muted); font-size: 11.5px; margin-bottom: 6px; line-height: 1.6; }
+
+.empty-note {
+  padding: 12px 8px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.7;
+}
+
+/* ---------------- 依赖图 ---------------- */
+
+.graph-wrap {
+  background: rgba(127,127,127,.06);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.graph-wrap svg { display: block; width: 100%; height: auto; }
+.graph-legend { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; font-size: 11px; color: var(--muted); }
+.gnode { cursor: pointer; }
+
+/* ---------------- 设置卡（标题栏齿轮控制开合，固定在头部下方） ----------------
+   L1：不再是操作条内的折叠块，而是独立固定卡；默认收起，展开时把消息流
+   整体下推。max-height 兜底，避免矮面板时把消息流挤没。 */
+
+.settings-body {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0 10px 8px;
+  padding: 8px 9px;
+  max-height: 50vh;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: rgba(127, 127, 127, .05);
+}
+
+.set-title {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* 头部扫描目录字段与设置卡字段共用 label + input 纵向布局 */
+.set-field,
+.dir-field {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--muted);
+  min-width: 0;
+}
+.set-row2 { display: flex; gap: 6px; }
+.set-row2 .set-field { flex: 1; }
+
+/* 面板内所有文本/密码输入框（头部扫描目录 + 设置卡）统一外观 */
+.panel input[type="text"],
+.panel input[type="password"] {
+  width: 100%;
+  padding: 4px 6px;
+  font-family: inherit;
+  font-size: 11.5px;
+  color: var(--vscode-input-foreground, var(--text));
+  background: var(--vscode-input-background, var(--panel));
+  border: 1px solid var(--vscode-input-border, var(--border));
+  border-radius: 6px;
+  outline: none;
+}
+.panel input[type="text"]:focus,
+.panel input[type="password"]:focus { border-color: var(--primary); }
+.panel input[type="text"]::placeholder,
+.panel input[type="password"]::placeholder { color: var(--muted); opacity: .75; }
+.panel input.uri-warn { border-color: var(--orange); }
+
+/* Neo4j URI 轻量提醒（仅提醒不拦截保存） */
+.set-hint {
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--orange);
+}
+
+/* API Key 支持范围说明（常显、中性灰色，区别于 URI 的橙色警告） */
+.set-note {
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+/* 保存按钮：主按钮样式（醒目、撑满设置区）；无 dirty 字段时灰显不可点 */
+.set-save {
+  margin-top: 2px;
+  padding: 6px 12px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--vscode-button-foreground, #fff);
+  background: var(--vscode-button-background, var(--primary));
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.set-save:hover:not(:disabled) { background: var(--vscode-button-hoverBackground, var(--primary)); }
+.set-save:disabled {
+  cursor: default;
+  color: var(--vscode-button-secondaryForeground, var(--muted));
+  background: var(--vscode-button-secondaryBackground, rgba(127, 127, 127, .18));
+  opacity: .6;
+}
+
+/* ---------------- 固定头部操作区（L1：由底部上移） ---------------- */
+
+.topbar {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.engine-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.engine-label {
+  font-size: 11.5px;
+  color: var(--muted);
+  flex-shrink: 0;
+}
+
+.engine-row select {
+  flex: 1;
+  padding: 4px 6px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--vscode-input-foreground, var(--text));
+  background: var(--vscode-input-background, var(--panel));
+  border: 1px solid var(--vscode-input-border, var(--border));
+  border-radius: 6px;
+  outline: none;
+  cursor: pointer;
+}
+.engine-row select:focus { border-color: var(--primary); }
+
+/* 依赖提示行（选中含 LAVD 的档位才显示） */
+.dep-hint {
+  font-size: 11px;
+  line-height: 1.6;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(127, 127, 127, .08);
+  word-break: break-word;
+}
+.dep-hint .dep-ok { color: var(--green); }
+.dep-hint .dep-warn { color: var(--orange); }
+
+.scan-btn {
+  padding: 7px 12px;
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  color: #fff;
+  background: var(--primary);
+  border: 1px solid var(--primary);
+  border-radius: 6px;
+}
+.scan-btn:hover { filter: brightness(1.1); }
+.scan-btn[disabled] { opacity: .5; cursor: default; }
+
+.status-actions { display: flex; gap: 8px; margin-top: 10px; }
+.status-action { padding: 5px 10px; }

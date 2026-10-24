@@ -143,6 +143,7 @@ def main():
                             entry["patterns"].append({
                                 "cwe": pat.get("cwe", "unknown"),
                                 "desc": pat.get("desc", ""),
+                                "desc_en": pat.get("desc_en", ""),  # Vivado Tcl 控制台用（纯 ASCII）
                                 "severity": pat.get("severity", "medium"),
                                 "hit_count": len(hits),
                                 "hits": details,

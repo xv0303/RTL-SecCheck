@@ -1,19 +1,1944 @@
 [
   {
-    "cwe": "CWE-STRUCT-SEQ-COND",
-    "desc": "Conditional sequential assignment structure: an Always block whose CFG offspring contains an If statement with a nonblocking assignment (<=) descendant. Common structural element of conditional-assignment CWEs (e.g., CWE-1231 missing optional reset).",
-    "severity": "low",
+    "cwe": "CWE-1231",
+    "desc": "lock/寄存器锁定位在运行时条件下被写入（数据通路可直接改写安全配置），需人工确认写者是否经过权限校验",
+    "desc_en": "Lock/security-config register bit written under runtime conditions (data path can directly rewrite secure config) - verify the write path is privilege-checked. Needs human review.",
+    "severity": "high",
     "pattern": {
       "Func": "Node",
-      "Params": ["Always"],
+      "Params": [
+        "If"
+      ],
       "Filter": {
         "Operator": "AND",
         "Condition": [
           {
-            "Path": [
-              {"Func": "CFGOffspring", "Params": ["If"]},
-              {"Func": "CFGOffspring", "Params": ["<="]}
+            "Func": "CFGOffspring",
+            "Params": [
+              "<="
+            ],
+            "Filter": {
+              "Operator": "AND",
+              "Condition": [
+                {
+                  "Func": "DriverVar",
+                  "Params": [],
+                  "Filter": {
+                    "Operator": "OR",
+                    "Condition": [
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "lock"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Lock"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "LOCK"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "reglk"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Reglk"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "REGLK"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "cwe": "CWE-1231",
+    "desc": "lock/寄存器锁定位在 case 分支中被写入，需人工确认分支条件是否包含权限校验",
+    "desc_en": "Lock/security-config register bit written inside a case branch - check whether the branch condition includes an authorization check. Needs human review.",
+    "severity": "medium",
+    "pattern": {
+      "Func": "Node",
+      "Params": [
+        "Switch"
+      ],
+      "Filter": {
+        "Operator": "AND",
+        "Condition": [
+          {
+            "Func": "CFGOffspring",
+            "Params": [
+              "<="
+            ],
+            "Filter": {
+              "Operator": "AND",
+              "Condition": [
+                {
+                  "Func": "DriverVar",
+                  "Params": [],
+                  "Filter": {
+                    "Operator": "OR",
+                    "Condition": [
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "lock"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Lock"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "LOCK"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "reglk"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Reglk"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "REGLK"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "cwe": "CWE-1232",
+    "desc": "调试/测试/扫描类信号（jtag、debug、scan、test）参与条件且控制涉及 lock 类变量的赋值（含索引写入，如 reglock_mem[j]）—— 锁定位可能被非正常路径解锁，需人工确认",
+    "desc_en": "Debug/test/scan-family signal (jtag/debug/scan/test) takes part in the condition while the branch rewrites lock-family registers - lock control may be reachable from debug mode.",
+    "severity": "high",
+    "pattern": {
+      "Func": "Node",
+      "Params": [
+        "If"
+      ],
+      "Filter": {
+        "Operator": "AND",
+        "Condition": [
+          {
+            "Func": "ConditionVar",
+            "Params": [],
+            "Filter": {
+              "Operator": "OR",
+              "Condition": [
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "debug"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Debug"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "DEBUG"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "scan"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Scan"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "SCAN"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "test"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Test"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "TEST"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "jtag"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "JTAG"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "dbg"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Dbg"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "DBG"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "Func": "CFGOffspring",
+            "Params": [
+              "<="
+            ],
+            "Filter": {
+              "Operator": "AND",
+              "Condition": [
+                {
+                  "Func": "ConditionVar",
+                  "Params": [],
+                  "Filter": {
+                    "Operator": "OR",
+                    "Condition": [
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "lock"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Lock"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "LOCK"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "reglk"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Reglk"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "REGLK"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "cwe": "CWE-1232",
+    "desc": "lock 类信号参与条件且分支中改写 lock/受保护配置类（*_cfg）寄存器（含索引写入）—— 锁定状态机可能未覆盖所有解锁路径，需人工确认",
+    "desc_en": "Lock-family signal in the condition while the branch rewrites lock/protected-config (*_cfg) registers - check whether this lock-update path misses a debug-privilege guard.",
+    "severity": "medium",
+    "pattern": {
+      "Func": "Node",
+      "Params": [
+        "If"
+      ],
+      "Filter": {
+        "Operator": "AND",
+        "Condition": [
+          {
+            "Func": "ConditionVar",
+            "Params": [],
+            "Filter": {
+              "Operator": "OR",
+              "Condition": [
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "lock"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Lock"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "LOCK"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "reglk"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Reglk"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "REGLK"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "Func": "CFGOffspring",
+            "Params": [
+              "<="
+            ],
+            "Filter": {
+              "Operator": "AND",
+              "Condition": [
+                {
+                  "Func": "ConditionVar",
+                  "Params": [],
+                  "Filter": {
+                    "Operator": "OR",
+                    "Condition": [
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "lock"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Lock"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "LOCK"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "reglk"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Reglk"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "REGLK"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "cfg"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Cfg"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "CFG"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "cwe": "CWE-1234",
+    "desc": "同一 if 条件中同时出现调试类信号（debug/scan/test/jtag）与 lock 类信号 —— 调试态可绕过锁定保护（对应 VerilogLAVD 论文 Fig.4 官方 TDP 的可用原语转写）",
+    "desc_en": "Same if condition contains a debug-family signal (debug/scan/test/jtag) AND a lock-family signal, with lock writes in the branch (paper Fig.4 TDP) - lock state may be tampered via the debug interface.",
+    "severity": "high",
+    "pattern": {
+      "Func": "Node",
+      "Params": [
+        "If"
+      ],
+      "Filter": {
+        "Operator": "AND",
+        "Condition": [
+          {
+            "Func": "ConditionVar",
+            "Params": [],
+            "Filter": {
+              "Operator": "OR",
+              "Condition": [
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "debug"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Debug"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "DEBUG"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "scan"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Scan"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "SCAN"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "test"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Test"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "TEST"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "jtag"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "JTAG"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "dbg"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Dbg"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "DBG"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "Func": "ConditionVar",
+            "Params": [],
+            "Filter": {
+              "Operator": "OR",
+              "Condition": [
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "lock"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Lock"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "LOCK"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "reglk"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Reglk"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "REGLK"
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "cwe": "CWE-1243",
+    "desc": "连续赋值（assign）直接引用 key/secret 类敏感数据 —— 密钥可能被无门控地暴露到任意读取方，需人工确认（词法启发式）",
+    "desc_en": "Continuous assignment (assign) directly reads key/secret-family sensitive data - the key may be exposed to untrusted functions. Needs human review.",
+    "severity": "medium",
+    "pattern": {
+      "Func": "Node",
+      "Params": [
+        "Assign"
+      ],
+      "Filter": {
+        "Operator": "AND",
+        "Condition": [
+          {
+            "Func": "LoadVar",
+            "Params": [],
+            "Filter": {
+              "Operator": "OR",
+              "Condition": [
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "key"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Key"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "KEY"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "secret"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Secret"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "SECRET"
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "cwe": "CWE-1244",
+    "desc": "连续赋值（assign）同时读取权限类（priv/auth/perm/access）与口令类（pwd/pass/pin）信号 —— 授权判断可能混淆，需人工确认（词法启发式）",
+    "desc_en": "Continuous assignment reads both privilege-family (priv/auth/perm/access) and password-family (pwd/pass) data - inconsistent authorization policy. Needs human review.",
+    "severity": "medium",
+    "pattern": {
+      "Func": "Node",
+      "Params": [
+        "Assign"
+      ],
+      "Filter": {
+        "Operator": "AND",
+        "Condition": [
+          {
+            "Func": "LoadVar",
+            "Params": [],
+            "Filter": {
+              "Operator": "OR",
+              "Condition": [
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "priv"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Priv"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "PRIV"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "auth"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Auth"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "AUTH"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "perm"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Perm"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "access"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Access"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "Func": "LoadVar",
+            "Params": [],
+            "Filter": {
+              "Operator": "OR",
+              "Condition": [
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "pwd"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Pwd"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "PWD"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "pass"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Pass"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "PASS"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "pin"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Pin"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "PIN"
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "cwe": "CWE-1244",
+    "desc": "调试/测试类信号参与条件且分支中存在对存储器（mem/rom/ram）的非阻塞读取 —— 调试态可能绕过授权读取受保护存储，需人工确认",
+    "desc_en": "Debug/test-family signal in the condition while the branch reads memory (mem/rom/ram) via nonblocking assignment - memory access may bypass the intended authorization.",
+    "severity": "medium",
+    "pattern": {
+      "Func": "Node",
+      "Params": [
+        "If"
+      ],
+      "Filter": {
+        "Operator": "AND",
+        "Condition": [
+          {
+            "Func": "ConditionVar",
+            "Params": [],
+            "Filter": {
+              "Operator": "OR",
+              "Condition": [
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "debug"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Debug"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "DEBUG"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "scan"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Scan"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "SCAN"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "test"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Test"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "TEST"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "jtag"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "JTAG"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "dbg"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Dbg"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "DBG"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "Func": "CFGOffspring",
+            "Params": [
+              "<="
+            ],
+            "Filter": {
+              "Operator": "AND",
+              "Condition": [
+                {
+                  "Func": "LoadVar",
+                  "Params": [],
+                  "Filter": {
+                    "Operator": "OR",
+                    "Condition": [
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "mem"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Mem"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "MEM"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "rom"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Rom"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "ROM"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "ram"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "RAM"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "cwe": "CWE-1245",
+    "desc": "case 语句分支数与判断表达式位宽的状态总数不一致（缺少状态/分支覆盖）。注意：遍历引擎无法表达『存在 default 分支』的否定判断，因此带完整 default 分支的 FSM 也会被标记 —— 对照样例中 1.v/4.v 即为已知误报，请人工确认",
+    "desc_en": "Case arm count differs from 2^(selector width) - missing state/branch coverage. NOTE: the engine cannot verify the default arm, so well-formed FSMs may match. LOW severity, needs human review.",
+    "severity": "low",
+    "pattern": {
+      "Func": "Node",
+      "Params": [
+        "Switch"
+      ],
+      "Filter": {
+        "Operator": "AND",
+        "Condition": [
+          {
+            "Func": "CaseCountNotEqualStateNum",
+            "Params": []
+          }
+        ]
+      }
+    }
+  },
+  {
+    "cwe": "CWE-1255",
+    "desc": "if 条件中比较口令/密钥类数据（pwd/pass/pin/key/secret）且分支中存在时序赋值 —— 逐位比较等分支结构易受时序侧信道攻击，需人工确认（词法启发式）",
+    "desc_en": "if condition compares password/key-family data (pwd/pass/pin/key/secret) while the branch contains timing assignments - possible timing side channel. Needs human review.",
+    "severity": "medium",
+    "pattern": {
+      "Func": "Node",
+      "Params": [
+        "If"
+      ],
+      "Filter": {
+        "Operator": "AND",
+        "Condition": [
+          {
+            "Func": "ConditionVar",
+            "Params": [],
+            "Filter": {
+              "Operator": "OR",
+              "Condition": [
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "pwd"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Pwd"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "PWD"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "pass"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Pass"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "PASS"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "pin"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Pin"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "PIN"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "key"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Key"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "KEY"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "secret"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Secret"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "SECRET"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "Func": "CFGOffspring",
+            "Params": [
+              "<="
             ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "cwe": "CWE-1258",
+    "desc": "非阻塞赋值改写 key/secret 类敏感寄存器（含索引写入）—— 密钥可能未按安全生命周期管理（如未清除/未受控改写），需人工确认（词法启发式）",
+    "desc_en": "Nonblocking assignment rewrites a key/secret-family sensitive register (incl. indexed writes) - the key may be exposed/overwritten without proper security control.",
+    "severity": "medium",
+    "pattern": {
+      "Func": "Node",
+      "Params": [
+        "<="
+      ],
+      "Filter": {
+        "Operator": "OR",
+        "Condition": [
+          {
+            "Func": "DriverVar",
+            "Params": [],
+            "Filter": {
+              "Operator": "OR",
+              "Condition": [
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "key"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Key"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "KEY"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "secret"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Secret"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "SECRET"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "Func": "ConditionVar",
+            "Params": [],
+            "Filter": {
+              "Operator": "OR",
+              "Condition": [
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "key"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Key"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "KEY"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "secret"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Secret"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "SECRET"
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "cwe": "CWE-1262",
+    "desc": "请求/写使能类信号（req/wr/write/load）参与条件且分支中改写 key/secret 类寄存器 —— 密钥寄存器写入可能缺少特权级校验，需人工确认",
+    "desc_en": "Request/write-enable-family signal (req/wr/write/load) in the condition while the branch rewrites key/secret-family registers - key register writes may lack a privilege check.",
+    "severity": "high",
+    "pattern": {
+      "Func": "Node",
+      "Params": [
+        "If"
+      ],
+      "Filter": {
+        "Operator": "AND",
+        "Condition": [
+          {
+            "Func": "ConditionVar",
+            "Params": [],
+            "Filter": {
+              "Operator": "OR",
+              "Condition": [
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "req"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Req"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "REQ"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "wr"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Wr"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "WR"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "write"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Write"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "WRITE"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "load"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Load"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "Func": "CFGOffspring",
+            "Params": [
+              "<="
+            ],
+            "Filter": {
+              "Operator": "AND",
+              "Condition": [
+                {
+                  "Func": "DriverVar",
+                  "Params": [],
+                  "Filter": {
+                    "Operator": "OR",
+                    "Condition": [
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "key"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Key"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "KEY"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "secret"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Secret"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "SECRET"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "cwe": "CWE-1271",
+    "desc": "使能类信号（en/enable）参与条件且分支中改写 lock/jtag/key 类调试或锁定寄存器 —— 调试/锁定位可能被普通使能路径初始化或篡改，需人工确认",
+    "desc_en": "Enable-family signal (en/enable) in the condition while the branch rewrites lock/jtag/dbg/key-family registers - the unlock path may miss a state check (initialization-dependent).",
+    "severity": "medium",
+    "pattern": {
+      "Func": "Node",
+      "Params": [
+        "If"
+      ],
+      "Filter": {
+        "Operator": "AND",
+        "Condition": [
+          {
+            "Func": "ConditionVar",
+            "Params": [],
+            "Filter": {
+              "Operator": "OR",
+              "Condition": [
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "en"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "En"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "enable"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Enable"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "Func": "CFGOffspring",
+            "Params": [
+              "<="
+            ],
+            "Filter": {
+              "Operator": "AND",
+              "Condition": [
+                {
+                  "Func": "DriverVar",
+                  "Params": [],
+                  "Filter": {
+                    "Operator": "OR",
+                    "Condition": [
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "lock"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Lock"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "LOCK"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "reglk"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Reglk"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "REGLK"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "jtag"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "JTAG"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "dbg"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Dbg"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "DBG"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "key"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Key"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "KEY"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "cwe": "CWE-1300",
+    "desc": "if 条件中含 key/secret 类敏感数据且分支中存在时序赋值 —— 数据依赖敏感值的分支/运算易引入时序侧信道，需人工确认（词法启发式；样例中不含敏感命名的常量时间实现会漏报）",
+    "desc_en": "if condition involves key/secret-family sensitive data while the branch contains timing assignments - branch/timing behavior may depend on the secret value (timing side-channel risk).",
+    "severity": "medium",
+    "pattern": {
+      "Func": "Node",
+      "Params": [
+        "If"
+      ],
+      "Filter": {
+        "Operator": "AND",
+        "Condition": [
+          {
+            "Func": "ConditionVar",
+            "Params": [],
+            "Filter": {
+              "Operator": "OR",
+              "Condition": [
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "secret"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Secret"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "SECRET"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "key"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Key"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "KEY"
+                  ]
+                }
+              ]
+            }
+          },
+          {
+            "Func": "CFGOffspring",
+            "Params": [
+              "<="
+            ]
+          }
+        ]
+      }
+    }
+  },
+  {
+    "cwe": "CWE-226",
+    "desc": "if 分支中改写 key/secret 类敏感寄存器（含索引写入，如 secret_key[addr]）—— 敏感信息可能未在不再需要时清除、或可被普通数据通路覆写，需人工确认（词法启发式）",
+    "desc_en": "if branch rewrites key/secret-family sensitive registers (incl. indexed writes such as secret_key[addr]) - sensitive information may be exposed to an untrusted observer.",
+    "severity": "medium",
+    "pattern": {
+      "Func": "Node",
+      "Params": [
+        "If"
+      ],
+      "Filter": {
+        "Operator": "OR",
+        "Condition": [
+          {
+            "Func": "CFGOffspring",
+            "Params": [
+              "<="
+            ],
+            "Filter": {
+              "Operator": "AND",
+              "Condition": [
+                {
+                  "Func": "DriverVar",
+                  "Params": [],
+                  "Filter": {
+                    "Operator": "OR",
+                    "Condition": [
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "key"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Key"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "KEY"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "secret"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Secret"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "SECRET"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "Func": "CFGOffspring",
+            "Params": [
+              "<="
+            ],
+            "Filter": {
+              "Operator": "AND",
+              "Condition": [
+                {
+                  "Func": "ConditionVar",
+                  "Params": [],
+                  "Filter": {
+                    "Operator": "OR",
+                    "Condition": [
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "key"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Key"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "KEY"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "secret"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "Secret"
+                        ]
+                      },
+                      {
+                        "Func": "Has",
+                        "Params": [
+                          "SECRET"
+                        ]
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "cwe": "CWE-1255",
+    "desc": "口令/密钥类数据（pwd/pass/pin/key）被非阻塞赋值锁存进寄存器 —— 敏感数据通路与移位结构易受时序/侧信道攻击，需人工确认（词法启发式）",
+    "desc_en": "Password/key-family data (pwd/pass/pin/key) latched into a register via nonblocking assignment - the storage/comparison path may leak via structural timing (side channel).",
+    "severity": "medium",
+    "pattern": {
+      "Func": "Node",
+      "Params": [
+        "<="
+      ],
+      "Filter": {
+        "Operator": "AND",
+        "Condition": [
+          {
+            "Func": "LoadVar",
+            "Params": [],
+            "Filter": {
+              "Operator": "OR",
+              "Condition": [
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "pwd"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Pwd"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "PWD"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "pass"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Pass"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "PASS"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "pin"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Pin"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "PIN"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "key"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Key"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "KEY"
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "cwe": "CWE-1300",
+    "desc": "非阻塞赋值读取 secret 类数据参与运算/锁存 —— 数据依赖秘密值的分支或运算易引入时序侧信道，需人工确认（词法启发式；不含敏感命名的常量时间实现会漏报）",
+    "desc_en": "Nonblocking assignment reads secret-family data for computation/latching - branch or timing behavior may depend on the secret value (side-channel risk).",
+    "severity": "medium",
+    "pattern": {
+      "Func": "Node",
+      "Params": [
+        "<="
+      ],
+      "Filter": {
+        "Operator": "AND",
+        "Condition": [
+          {
+            "Func": "LoadVar",
+            "Params": [],
+            "Filter": {
+              "Operator": "OR",
+              "Condition": [
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "secret"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Secret"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "SECRET"
+                  ]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  },
+  {
+    "cwe": "CWE-1243",
+    "desc": "组合逻辑阻塞赋值（always @(*) 中的 =）直接引用 key/secret 类敏感数据 —— 密钥可能被无门控地暴露到任意读取方，需人工确认（词法启发式）",
+    "desc_en": "Combinational blocking assignment (= inside always @(*)) directly reads key/secret-family sensitive data - the key is exposed on a combinational path.",
+    "severity": "medium",
+    "pattern": {
+      "Func": "Node",
+      "Params": [
+        "="
+      ],
+      "Filter": {
+        "Operator": "AND",
+        "Condition": [
+          {
+            "Func": "LoadVar",
+            "Params": [],
+            "Filter": {
+              "Operator": "OR",
+              "Condition": [
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "key"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Key"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "KEY"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "secret"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "Secret"
+                  ]
+                },
+                {
+                  "Func": "Has",
+                  "Params": [
+                    "SECRET"
+                  ]
+                }
+              ]
+            }
           }
         ]
       }

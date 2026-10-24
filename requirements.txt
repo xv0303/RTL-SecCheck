@@ -1,8 +1,8 @@
-# RTL-SecCheck backend dependencies (the backend venv needs ONLY these three)
-# - LLM calls use Python stdlib urllib (no openai/requests package needed)
-# - pyverilog / neo4j driver are dependencies of the ENGINE repos:
-#   install them inside each engine repo's own venv per its README
-#   (VerilogLAVD: pyverilog + neo4j; VeriPVD: see its requirements.txt)
+# RTL-SecCheck 后端运行依赖
+#
+# 后端通过 Python 标准库 urllib 调用 LLM 服务，不需要安装 openai 或 requests。
+# pyverilog、neo4j 等依赖属于 VerilogLAVD / VeriPVD 检测引擎，
+# 请按照各自仓库的 README 安装到对应引擎的虚拟环境中。
 fastapi>=0.110
 uvicorn>=0.29
 pydantic>=2.6
