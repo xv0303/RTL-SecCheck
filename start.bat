@@ -16,11 +16,10 @@ if %errorlevel%==0 (
     exit /b 0
 )
 
-echo [INFO] Starting RTL-SecCheck at http://127.0.0.1:8321
+echo [INFO] Starting RTL-SecCheck backend API at http://127.0.0.1:8321
 echo [INFO] KEEP THIS WINDOW OPEN - closing it stops the service.
 echo [INFO] Full log file: %LOG%
 echo %date% %time%  [START] launching service >> "%LOG%"
-start "" http://127.0.0.1:8321
 
 rem Run uvicorn with output shown in this window AND appended to the log file
 rem (stderr is merged at the cmd layer so PowerShell does not wrap log lines in red NativeCommandError)

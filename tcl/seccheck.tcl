@@ -10,14 +10,13 @@
 #      seccheck status [scan_id]
 #      seccheck report [scan_id]
 #      seccheck fix   <finding_id> [scan_id]
-#      seccheck graph [scan_id]              graph view in browser
-#      seccheck web   [scan_id | page]       web UI in browser
+#      seccheck graph [scan_id]              export graph data to JSON
 #      seccheck help
 #
 #  NOTE: all console output is plain ASCII on purpose. Vivado's
 #  Tcl console on Windows uses the local code page (GBK) and
-#  cannot render UTF-8 Chinese text correctly. For full reports
-#  with proper encoding use: seccheck web
+#  cannot render UTF-8 Chinese text correctly. The VS Code panel
+#  provides the interactive report and graph view.
 # =============================================================
 
 package require http 2.5
@@ -178,16 +177,6 @@ proc seccheck_stop {} {
     set ::SEC_PID ""
 }
 
-proc sec_open_browser {url} {
-    if {[catch {exec rundll32 url.dll,FileProtocolHandler $url &} err]} {
-        puts ">> could not launch browser automatically: $err"
-        puts ">> open this URL manually:"
-        puts "   $url"
-    } else {
-        puts ">> opened in browser: $url"
-    }
-}
-
 # ---------------- commands ----------------
 proc sec_common_parent {dirs} {
     set first [lindex $dirs 0]
@@ -262,7 +251,7 @@ proc seccheck_report {{scan_id ""}} {
             puts $ln
         }
     }
-    puts ">> full report:  seccheck web report"
+    puts ">> full report:  open the VS Code panel"
     puts ">> fix details:  seccheck fix <finding_id>"
 }
 
@@ -271,41 +260,19 @@ proc seccheck_fix {finding_id {scan_id ""}} {
     puts ">> generating fix for $finding_id (LLM call, may take 30-60 s) ..."
     set q "[::http::formatQuery scan_id $id]&[::http::formatQuery finding $finding_id]"
     puts [sec_http "/api/tcl/fix?$q" 180000]
-    puts ">> patch + verification details:  seccheck web report"
+    puts ">> patch + verification details:  open the VS Code panel"
 }
 
 proc seccheck_graph {{scan_id ""}} {
     set id [sec_resolve_id $scan_id]
-    set q "[::http::formatQuery scan_id $id]&what=graph"
-    set out [sec_http "/api/tcl/open?$q"]
-    if {[regexp {URL\s+(\S+)} $out -> url]} {
-        sec_open_browser $url
-    } else {
-        puts $out
-    }
-}
-
-proc seccheck_web {{a ""} {b ""}} {
-    if {$a eq ""} {
-        sec_open_browser $::SEC_BASE
-        return
-    }
-    if {[string match "S-*" $a]} {
-        set id $a
-        set what "report"
-        if {$b ne ""} { set what $b }
-        set q "[::http::formatQuery scan_id $id]&what=[::http::formatQuery what $what]"
-        set out [sec_http "/api/tcl/open?$q"]
-        if {[regexp {URL\s+(\S+)} $out -> url]} {
-            sec_open_browser $url
-        } else {
-            puts $out
-        }
-    } else {
-        # first arg is a page name (report|graph) -> use last scan
-        set id [sec_resolve_id ""]
-        seccheck_web $id $a
-    }
+    set out [sec_http "/api/scan/$id/graph"]
+    set fp [file normalize [file join [pwd] "RTL-SecCheck-${id}-graph.json"]]
+    set ch [open $fp w]
+    fconfigure $ch -encoding utf-8 -translation lf
+    puts -nonewline $ch $out
+    close $ch
+    puts ">> graph data exported: $fp"
+    puts ">> open the VS Code RTL-SecCheck panel for the interactive graph view"
 }
 
 proc seccheck_help {} {
@@ -316,10 +283,9 @@ RTL-SecCheck commands (Vivado Tcl Console):
   seccheck scanproj [engines]          scan ALL sources of the current Vivado project
   seccheck scan  <rtl_dir> [engines]   start scan; engines: pvd|lavd|both (default both; "none" rejected)
   seccheck status [scan_id]            show scan progress / logs
-  seccheck report [scan_id]            list findings (like the web report page)
+  seccheck report [scan_id]            list findings in the Tcl console
   seccheck fix  <finding_id>           LLM fix suggestion (needs API key, 30-60 s)
-  seccheck graph [scan_id]             open graph visualization in browser
-  seccheck web  [scan_id|page]         open web UI (page: report|graph)
+  seccheck graph [scan_id]             export graph data to a local JSON file
   seccheck help                        this help
 
 Examples:
@@ -330,7 +296,6 @@ Examples:
   seccheck report
   seccheck fix V-001
   seccheck graph
-  seccheck web graph
 }
 }
 
@@ -346,7 +311,6 @@ proc seccheck {cmd args} {
             report  { seccheck_report {*}$args }
             fix     { seccheck_fix    {*}$args }
             graph   { seccheck_graph  {*}$args }
-            web     { seccheck_web    {*}$args }
             help    { seccheck_help }
             default { puts "unknown command: $cmd"; seccheck_help }
         }

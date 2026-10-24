@@ -7,7 +7,7 @@ RTL-SecCheck 是一个面向 Verilog RTL 的本地硬件安全分析工具，提
 - 统一漏洞报告：漏洞类型、严重级别、文件位置和证据链
 - 模块依赖图：展示模块之间的连接关系，并标注漏洞位置
 - 修复建议：针对单个 finding 生成 LLM 修复建议，并支持基础编译验证
-- 多入口使用：浏览器 Web UI、VS Code 面板和 Vivado Tcl Console
+- 多入口使用：VS Code 面板和 Vivado Tcl Console
 
 ## 项目组成
 
@@ -19,8 +19,7 @@ RTL-SecCheck 后端（FastAPI，默认端口 8321）
    ├── VerilogLAVD：解析 RTL → Neo4j 属性图 → CWE 模式检测
    └── VeriPVD：生成权限流分析配置 → 结构分析 → LLM 分析
    │
-   ├── Web UI：报告、依赖图、修复建议
-   ├── VS Code 插件：侧边栏扫描和结果查看
+   ├── VS Code 插件：侧边栏扫描、报告、依赖图和修复建议
    └── Vivado Tcl 插件：扫描、状态、报告和修复建议
 ```
 
@@ -32,7 +31,7 @@ RTL-SecCheck 后端（FastAPI，默认端口 8321）
 | Git | 下载项目和检测引擎 | 用于克隆 VeriPVD、VerilogLAVD |
 | Neo4j Desktop | VerilogLAVD 图数据库 | 使用 LAVD 检测前启动数据库 |
 | iverilog | 修复建议基础验证 | 可选，未安装时跳过编译验证 |
-| Vivado | Vivado Tcl 插件 | 可选，Web UI 和 VS Code 插件不依赖 Vivado |
+| Vivado | Vivado Tcl 插件 | 可选，VS Code 插件不依赖 Vivado |
 | LLM API Key | VeriPVD LLM 分析和修复建议 | 未配置时使用规则模式和本地降级建议 |
 
 后端 `requirements.txt` 只包含 RTL-SecCheck 后端本身的依赖：FastAPI、Uvicorn 和 Pydantic。VerilogLAVD 与 VeriPVD 的依赖安装在各自引擎目录的虚拟环境中。
@@ -74,11 +73,11 @@ git clone https://github.com/Chip-Security-Lab/VerilogLAVD
 backend\.venv\Scripts\python.exe -m uvicorn --app-dir backend main:app --host 127.0.0.1 --port 8321
 ```
 
-启动后可以打开 <http://127.0.0.1:8321> 使用 Web UI。
+启动后端后，VS Code 插件和 Vivado Tcl 插件即可连接本地 API 服务。
 
 ## 配置
 
-首次启动后端会自动创建 `backend/settings.json`。可以通过 Web UI 设置页或文本编辑器修改：
+首次启动后端会自动创建 `backend/settings.json`。可以通过 VS Code 设置面板或文本编辑器修改：
 
 ```json
 {
@@ -130,14 +129,15 @@ code --install-extension vscode-extension\csl-rtl-seccheck-0.1.1.vsix
 
 如果插件无法自动定位项目根目录，可以在 VS Code 设置中配置 `cslRtlSeccheck.projectRoot`，指向包含 `backend/main.py` 的 RTL-SecCheck 目录。
 
-## 使用 Web UI
+## 使用 VS Code 面板
 
-1. 在“扫描目标目录”中选择 RTL 目录。
-2. 在引擎下拉框中选择“双引擎”“仅 LAVD”或“仅 PVD”。
-3. 点击“启动并扫描”。
-4. 在报告卡中查看漏洞、证据链和文件位置。
-5. 点击“查看依赖图”分析模块关系。
-6. 在具体 finding 中生成修复建议。
+1. 在 VS Code 中打开 RTL-SecCheck 面板。
+2. 在“扫描目标目录”中选择 RTL 目录。
+3. 在引擎下拉框中选择“双引擎”“仅 LAVD”或“仅 PVD”。
+4. 点击“启动并扫描”。
+5. 在报告卡中查看漏洞、证据链和文件位置。
+6. 点击“查看依赖图”分析模块关系。
+7. 在具体 finding 中生成修复建议。
 
 进度条统一使用后端返回的 `0–100` 百分比，并限制在合法范围内。未知模型会直接返回明确错误，不会静默发送到其他服务商。
 
@@ -159,8 +159,9 @@ seccheck help
 | `seccheck status` | 查看扫描进度和日志 |
 | `seccheck report` | 查看漏洞报告 |
 | `seccheck fix <finding_id>` | 生成修复建议 |
-| `seccheck graph` | 打开模块依赖图 |
-| `seccheck web` | 打开 Web UI |
+| `seccheck graph` | 将当前扫描的依赖图导出为 JSON 文件 |
+
+Vivado Tcl 的 `seccheck graph` 会在当前目录生成 `RTL-SecCheck-<scan_id>-graph.json`。需要交互式查看依赖图时，请打开 VS Code RTL-SecCheck 面板。
 
 ## 本版本修复内容
 
@@ -196,7 +197,6 @@ backend\.venv\Scripts\python.exe -B -m unittest discover -s tests -p test_backen
 ```text
 RTL-SecCheck/
 ├── backend/              后端服务和检测协调逻辑
-├── frontend/             Web UI
 ├── vscode-extension/     VS Code 插件源码和 VSIX
 ├── tcl/                  Vivado Tcl 插件
 ├── examples/             示例 RTL 工程

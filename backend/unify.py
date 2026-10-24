@@ -1,6 +1,6 @@
 """统一 Finding Schema — 所有引擎的检测结果都归一化为这个结构。
 
-后续网页版 / VSCode 插件 / Vivado Tcl 全部消费这个 Schema。
+后续 VS Code 插件 / Vivado Tcl 全部消费这个 Schema。
 """
 from __future__ import annotations
 

@@ -213,7 +213,7 @@ def generate_fix(scan_dir: str, scan_id: str, finding_id: str, settings: dict, l
 
 def _generate_fix(scan_dir: str, scan_id: str, finding_id: str, settings: dict,
                   lang: str, report_lock) -> dict:
-    """lang: zh=网页用中文; en=Vivado Tcl 控制台用（其控制台无法显示非 ASCII）。"""
+    """lang: zh=面板用中文; en=Vivado Tcl 控制台用（其控制台无法显示非 ASCII）。"""
     rep_fp = Path(scan_dir) / "report.json"
     with report_lock:
         rep = json.loads(rep_fp.read_text(encoding="utf-8"))

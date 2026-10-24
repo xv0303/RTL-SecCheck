@@ -2,7 +2,7 @@
  * 面板样式。
  *
  * CSS 变量与组件类（.card / .tag / .pill / .chain-step / .progress-log / .fix-panel）
- * 沿用 frontend/index.html 的定义，但底色改用 VSCode 主题变量，这样在深色主题下
+ * 沿用面板布局定义，但底色改用 VSCode 主题变量，这样在深色主题下
  * 不会出现「白底黑字浮在暗色侧边栏上」的问题。语义色（严重度红/黄/蓝）保持固定。
  *
  * 侧边栏宽度通常只有 300~400px，所以原页面里的双列网格（.row / .detail-grid）

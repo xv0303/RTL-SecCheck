@@ -1,7 +1,7 @@
 """RTL-SecCheck 后端 — FastAPI 入口。
 
 启动:  uvicorn main:app --host 127.0.0.1 --port 8321
-页面:  http://127.0.0.1:8321
+API:   http://127.0.0.1:8321
 """
 from __future__ import annotations
 
@@ -19,7 +19,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel
 
 import engines
@@ -31,7 +31,6 @@ from llm_providers import model_list_endpoint
 BASE = Path(__file__).resolve().parent.parent          # RTL-SecCheck/
 SETTINGS_FP = BASE / "backend" / "settings.json"
 SCANS_DIR = BASE / "scans"
-FRONTEND = BASE / "frontend"
 
 DEFAULT_SETTINGS = {
     "veripvd_path": "",              # clone of https://github.com/anwen0724/VeriPVD
@@ -42,7 +41,7 @@ DEFAULT_SETTINGS = {
     "verilavlvd_last_result": "",    # 论文复现管线导出的结果 JSON
     "iverilog_path": "",             # iverilog.exe; auto-detected via PATH if empty
     "llm_model": "deepseek-chat",
-    "api_key": "",                   # 用户在网页填写后存这里（仅本机）
+    "api_key": "",                   # 用户在 VS Code 设置面板或配置文件中填写（仅本机）
     "neo4j_uri": "bolt://localhost:7687",
     "neo4j_user": "neo4j",
     "neo4j_password": "",
@@ -740,7 +739,7 @@ def tcl_fix(scan_id: str, finding: str):
         raise HTTPException(404, f"report not ready for {scan_id}")
     s = load_settings()
     if not s.get("api_key"):
-        raise HTTPException(400, "no LLM API key configured (set it on the web Settings page or in settings.json)")
+        raise HTTPException(400, "no LLM API key configured (set it in the VS Code settings panel or settings.json)")
     try:
         f = fixgen.generate_fix(str(SCANS_DIR / scan_id), scan_id, finding, s, lang="en")
     except LookupError as e:
@@ -754,23 +753,3 @@ def tcl_fix(scan_id: str, finding: str):
     return Response(_gbk_safe("\n".join(lines) + "\n"), **_TCL_TEXT)
 
 
-@app.get("/api/tcl/open")
-def tcl_open(scan_id: str, what: str = "graph"):
-    """what: graph | report — 返回浏览器可打开的网页地址（复用网页版页面）"""
-    fp = SCANS_DIR / scan_id / "report.json"
-    if not fp.is_file():
-        raise HTTPException(404, f"report not ready for {scan_id}")
-    page = "graph" if what == "graph" else "report"
-    return Response(_gbk_safe(f"URL http://127.0.0.1:8321/?scan={scan_id}&page={page}\n"
-                    f"HINT open the {'graph view' if page == 'graph' else 'full report'} in browser\n"), **_TCL_TEXT)
-
-
-# ---------------- 静态页面 ----------------
-@app.get("/")
-def index():
-    return FileResponse(FRONTEND / "index.html")
-
-
-@app.get("/favicon.ico")
-def favicon():
-    return Response(status_code=204)
