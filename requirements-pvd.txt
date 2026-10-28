@@ -1,0 +1,10 @@
+# VeriPVD dependencies.
+# Install these in third_party/VeriPVD/.venv, not in backend/.venv.
+anthropic
+langchain-anthropic
+langchain-core
+langchain-google-genai
+langchain-openai
+openai
+pydantic
+pyyaml

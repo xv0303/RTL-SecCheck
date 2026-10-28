@@ -1,4 +1,4 @@
-"""双引擎适配器：以子进程方式调用本地克隆的 VerilogLAVD / VeriPVD。
+"""双引擎适配器：以子进程方式调用项目内置的 VerilogLAVD / VeriPVD 源码。
 
 设计原则:
 - 原仓库保持只读，不改它们的代码。
@@ -12,9 +12,21 @@ import json
 import os
 import subprocess
 import sys
+from pathlib import Path
 
 from unify import from_veriloglavd, from_veripvd
 from llm_providers import provider_of as _provider_of
+
+
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _configured_path(value: str | None) -> str:
+    """Resolve paths from settings relative to the RTL-SecCheck project root."""
+    if not value:
+        return ""
+    path = Path(value)
+    return str(path if path.is_absolute() else PROJECT_ROOT / path)
 
 
 def _run(cmd: list[str], cwd: str | None, env_extra: dict | None = None, timeout: int = 1800):
@@ -37,11 +49,11 @@ def _run(cmd: list[str], cwd: str | None, env_extra: dict | None = None, timeout
 def run_veripvd(rtl_dir: str, scan_dir: str, settings: dict, api_key: str | None):
     logs, findings, warnings = [], [], []
 
-    base = settings.get("veripvd_path", "")
+    base = _configured_path(settings.get("veripvd_path", ""))
     if not os.path.isdir(base):
         return findings, [f"VeriPVD path not configured or missing: '{base}' (set it in the web Settings page)"]
-    py = settings.get("veripvd_python")
-    if not py:
+    py = _configured_path(settings.get("veripvd_python"))
+    if not py or not os.path.isfile(py):
         cand = os.path.join(base, ".venv", "Scripts", "python.exe")
         py = cand if os.path.isfile(cand) else sys.executable
 
@@ -118,12 +130,12 @@ def run_veripvd(rtl_dir: str, scan_dir: str, settings: dict, api_key: str | None
 # 导出)则解析；若配置了 run_detection 入口则尝试子进程调用。失败一律降级。
 def run_veriloglavd(rtl_dir: str, scan_dir: str, settings: dict):
     logs, findings, warnings = [], [], []
-    base = settings.get("verilavlvd_path", "")
-    py = settings.get("verilavlvd_python")
-    if not py and base:
+    base = _configured_path(settings.get("verilavlvd_path", ""))
+    py = _configured_path(settings.get("verilavlvd_python"))
+    if (not py or not os.path.isfile(py)) and base:
         cand = os.path.join(base, ".venv", "Scripts", "python.exe")
         py = cand if os.path.isfile(cand) else sys.executable
-    if not py:
+    if not py or not os.path.isfile(py):
         py = sys.executable
 
     if not os.path.isdir(base):
@@ -193,7 +205,7 @@ def run_veriloglavd(rtl_dir: str, scan_dir: str, settings: dict):
             warnings.append("VerilogLAVD bridge run failed (check that Neo4j is running and the password is correct)")
 
     # 方式 B: 降级 —— 读取用户在设置里指定的"最近一次检测结果文件"
-    cached = settings.get("verilavlvd_last_result")
+    cached = _configured_path(settings.get("verilavlvd_last_result"))
     if cached and os.path.isfile(cached):
         try:
             with open(cached, encoding="utf-8") as f:

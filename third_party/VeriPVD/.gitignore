@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+datasets/
+runs/
+evaluation_results/
+outputs/
+.idea/
+verification_input/
+verification_output/

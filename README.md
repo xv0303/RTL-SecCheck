@@ -28,13 +28,13 @@ RTL-SecCheck 后端（FastAPI，默认端口 8321）
 | 组件 | 用途 | 说明 |
 |---|---|---|
 | Python 3.10+ | 运行后端 | 安装时建议勾选 Add Python to PATH |
-| Git | 下载项目和检测引擎 | 用于克隆 VeriPVD、VerilogLAVD |
+| Git | 下载 RTL-SecCheck | 可选，ZIP 也可以 |
 | Neo4j Desktop | VerilogLAVD 图数据库 | 使用 LAVD 检测前启动数据库 |
 | iverilog | 修复建议基础验证 | 可选，未安装时跳过编译验证 |
 | Vivado | Vivado Tcl 插件 | 可选，VS Code 插件不依赖 Vivado |
 | LLM API Key | VeriPVD LLM 分析和修复建议 | 未配置时使用规则模式和本地降级建议 |
 
-后端 `requirements.txt` 只包含 RTL-SecCheck 后端本身的依赖：FastAPI、Uvicorn 和 Pydantic。VerilogLAVD 与 VeriPVD 的依赖安装在各自引擎目录的虚拟环境中。
+根目录 `requirements.txt` 只包含 RTL-SecCheck 后端依赖。两个引擎分别使用 `requirements-lavd.txt`、`requirements-pvd.txt` 和自己的虚拟环境，避免不同版本的 Python 包相互影响。
 
 ## 快速开始
 
@@ -56,16 +56,25 @@ python -m venv backend\.venv
 backend\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-### 3. 下载检测引擎
+### 3. 安装 VerilogLAVD 环境
 
 ```bat
-git clone https://github.com/anwen0724/VeriPVD
-git clone https://github.com/Chip-Security-Lab/VerilogLAVD
+py -3.12 -m venv third_party\VerilogLAVD\.venv
+third_party\VerilogLAVD\.venv\Scripts\python.exe -m pip install -r requirements-lavd.txt
 ```
 
-按照两个引擎仓库各自的 README 创建并安装它们的虚拟环境。引擎依赖不会重复写入 RTL-SecCheck 的后端依赖文件。
+VerilogLAVD 按上游项目要求使用 Python 3.12 或更高版本，并需要可用的 Neo4j 服务。启动 Neo4j 后，把实际 Bolt 端口写入 `backend/settings.json`，默认通常是 `bolt://localhost:7687`；如果本机使用 `7787`，则填写 `bolt://localhost:7787`。
 
-### 4. 启动后端
+### 4. 安装 VeriPVD 环境
+
+```bat
+py -3.10 -m venv third_party\VeriPVD\.venv
+third_party\VeriPVD\.venv\Scripts\python.exe -m pip install -r requirements-pvd.txt
+```
+
+两个引擎源码已放在 `third_party/`，不需要再次克隆上游仓库。依赖安装命令需要在联网环境执行；两个 requirements 文件是清单，安装完成后环境保存在各自的 `.venv` 目录中。
+
+### 5. 启动后端
 
 在项目根目录双击 `start.bat`，或者手动运行：
 
@@ -73,7 +82,7 @@ git clone https://github.com/Chip-Security-Lab/VerilogLAVD
 backend\.venv\Scripts\python.exe -m uvicorn --app-dir backend main:app --host 127.0.0.1 --port 8321
 ```
 
-启动后端后，VS Code 插件和 Vivado Tcl 插件即可连接本地 API 服务。
+VS Code 和 Vivado 正常使用时会先检查后端，未运行时自动启动它。
 
 ## 配置
 
@@ -81,8 +90,10 @@ backend\.venv\Scripts\python.exe -m uvicorn --app-dir backend main:app --host 12
 
 ```json
 {
-  "veripvd_path": "C:/tools/VeriPVD",
-  "verilavlvd_path": "C:/tools/VerilogLAVD",
+  "veripvd_path": "third_party/VeriPVD",
+  "veripvd_python": "third_party/VeriPVD/.venv/Scripts/python.exe",
+  "verilavlvd_path": "third_party/VerilogLAVD",
+  "verilavlvd_python": "third_party/VerilogLAVD/.venv/Scripts/python.exe",
   "neo4j_uri": "bolt://localhost:7687",
   "neo4j_user": "neo4j",
   "neo4j_password": "your-neo4j-password",
@@ -91,6 +102,8 @@ backend\.venv\Scripts\python.exe -m uvicorn --app-dir backend main:app --host 12
   "rtl_dir": "C:/path/to/rtl"
 }
 ```
+
+完整字段示例见 [backend/settings.example.json](backend/settings.example.json)。路径可以写成相对项目根目录的路径，也可以写绝对路径。已有用户配置不会被启动过程覆盖；需要使用随项目提供的引擎时，将两个引擎路径改为上面的 `third_party` 路径。
 
 主要字段说明：
 
@@ -109,13 +122,9 @@ backend\.venv\Scripts\python.exe -m uvicorn --app-dir backend main:app --host 12
 
 VS Code 插件负责面板交互，后端服务负责扫描和报告处理。插件安装后需要连接本地 RTL-SecCheck 后端。
 
-### 从插件市场安装
-
-在 VS Code 扩展市场搜索 `RTL-SecCheck`，点击安装。首次打开面板时，插件会自动探测本地后端；如果未检测到后端，面板会显示安装步骤和“重新连接”按钮。
-
 ### 从 VSIX 安装
 
-项目的 `vscode-extension` 目录包含 VSIX 安装包。也可以在 VS Code 中选择：
+项目的 `vscode-extension` 目录包含 VSIX 安装包。当前交付方式是本地 VSIX 安装，也可以在 VS Code 中选择：
 
 ```text
 扩展 → … → 从 VSIX 安装
@@ -143,7 +152,7 @@ code --install-extension vscode-extension\csl-rtl-seccheck-0.1.1.vsix
 
 ## 使用 Vivado Tcl 插件
 
-在 Vivado Tcl Console 中运行：
+在 Vivado Tcl Console 中运行。`source` 时 Tcl 文件会根据自身位置定位项目根目录，检查后端并在需要时自动启动：
 
 ```tcl
 source {C:/path/to/RTL-SecCheck/tcl/seccheck.tcl}
@@ -197,11 +206,14 @@ backend\.venv\Scripts\python.exe -B -m unittest discover -s tests -p test_backen
 ```text
 RTL-SecCheck/
 ├── backend/              后端服务和检测协调逻辑
+├── third_party/           VerilogLAVD、VeriPVD 源码和各自虚拟环境
 ├── vscode-extension/     VS Code 插件源码和 VSIX
 ├── tcl/                  Vivado Tcl 插件
 ├── examples/             示例 RTL 工程
 ├── tests/                自动化测试
 ├── requirements.txt      后端依赖
+├── requirements-lavd.txt LAVD 依赖
+├── requirements-pvd.txt  PVD 依赖
 └── start.bat             Windows 启动脚本
 ```
 

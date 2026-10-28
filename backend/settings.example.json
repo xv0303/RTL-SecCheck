@@ -1,0 +1,15 @@
+{
+  "veripvd_path": "third_party/VeriPVD",
+  "veripvd_python": "third_party/VeriPVD/.venv/Scripts/python.exe",
+  "verilavlvd_path": "third_party/VerilogLAVD",
+  "verilavlvd_python": "third_party/VerilogLAVD/.venv/Scripts/python.exe",
+  "verilavlvd_entry": "",
+  "verilavlvd_last_result": "",
+  "iverilog_path": "",
+  "llm_model": "deepseek-chat",
+  "api_key": "",
+  "neo4j_uri": "bolt://localhost:7687",
+  "neo4j_user": "neo4j",
+  "neo4j_password": "",
+  "rtl_dir": "examples/demo_soc"
+}

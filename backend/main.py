@@ -32,11 +32,19 @@ BASE = Path(__file__).resolve().parent.parent          # RTL-SecCheck/
 SETTINGS_FP = BASE / "backend" / "settings.json"
 SCANS_DIR = BASE / "scans"
 
+
+def _project_path(value: str | None) -> str:
+    """Resolve a settings path relative to the project root."""
+    if not value:
+        return ""
+    path = Path(value)
+    return str(path if path.is_absolute() else BASE / path)
+
 DEFAULT_SETTINGS = {
-    "veripvd_path": "",              # clone of https://github.com/anwen0724/VeriPVD
-    "veripvd_python": "",            # its venv python; auto-detected as <veripvd_path>/.venv if empty
-    "verilavlvd_path": "",           # clone of https://github.com/Chip-Security-Lab/VerilogLAVD
-    "verilavlvd_python": "",         # its venv python; auto-detected as <verilavlvd_path>/.venv if empty
+    "veripvd_path": str(BASE / "third_party" / "VeriPVD"),
+    "veripvd_python": str(BASE / "third_party" / "VeriPVD" / ".venv" / "Scripts" / "python.exe"),
+    "verilavlvd_path": str(BASE / "third_party" / "VerilogLAVD"),
+    "verilavlvd_python": str(BASE / "third_party" / "VerilogLAVD" / ".venv" / "Scripts" / "python.exe"),
     "verilavlvd_entry": "",          # 如 src/traversal_engine/run_detection.py，留空=走桥接器
     "verilavlvd_last_result": "",    # 论文复现管线导出的结果 JSON
     "iverilog_path": "",             # iverilog.exe; auto-detected via PATH if empty
@@ -619,7 +627,9 @@ def read_file(path: str, scan_id: str = ""):
                 if os.path.isfile(cand):
                     real = cand
     # 安全: 只允许读取已扫描工程与两个引擎仓库内的文本文件
-    allowed_roots = [load_settings().get("veripvd_path", ""), load_settings().get("verilavlvd_path", "")]
+    current_settings = load_settings()
+    allowed_roots = [_project_path(current_settings.get("veripvd_path", "")),
+                     _project_path(current_settings.get("verilavlvd_path", ""))]
     allowed_roots += [j["rtl_dir"] for j in _JOBS.values()]
     # 白名单加入所有历史扫描的 rtl_dir（后端重启后 _JOBS 为空也能读）
     if SCANS_DIR.is_dir():

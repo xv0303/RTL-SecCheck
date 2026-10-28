@@ -1,0 +1,30 @@
+module i2s_ws_gen (
+	sck_i,
+	rstn_i,
+	cfg_ws_en_i,
+	ws_o,
+	cfg_data_size_i
+);
+	input wire sck_i;
+	input wire rstn_i;
+	input wire cfg_ws_en_i;
+	output reg ws_o;
+	input wire [4:0] cfg_data_size_i;
+	reg [4:0] r_counter;
+	always @(posedge sck_i or negedge rstn_i)
+		if (rstn_i == 1'b0)
+			r_counter <= 'h0;
+		else if (cfg_ws_en_i) begin
+			if (r_counter == cfg_data_size_i)
+				r_counter <= 'h0;
+			else
+				r_counter <= r_counter + 1;
+		end
+	always @(negedge sck_i or negedge rstn_i)
+		if (rstn_i == 1'b0)
+			ws_o <= 1'b0;
+		else if (cfg_ws_en_i) begin
+			if (r_counter == cfg_data_size_i)
+				ws_o <= ~ws_o;
+		end
+endmodule

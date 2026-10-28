@@ -1,0 +1,7 @@
+# VerilogLAVD dependencies.
+# Install these in third_party/VerilogLAVD/.venv, not in backend/.venv.
+pyverilog>=1.3
+neo4j>=5.0
+tqdm>=4.60
+pandas>=2.0
+autogen>=0.2
