@@ -2,6 +2,7 @@
 src/**
 node_modules/**
 out/**/*.map
+out/out/**
 tsconfig.json
 **/.gitignore
 docs/**

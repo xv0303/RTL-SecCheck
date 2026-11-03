@@ -26,7 +26,9 @@ class Element {
       toggle: (x, on = !classes.has(x)) => { on ? classes.add(x) : classes.delete(x); return on; } };
   }
   addEventListener(k, f) { this.listeners[k] = f; }
-  appendChild(c) { this.childNodes.push(c); c.isConnected = true; return c; }
+  appendChild(c) { this.childNodes.push(c); c.isConnected = true; c.parentNode = this; return c; }
+  get firstChild() { return this.childNodes[0] || null; }
+  setAttribute(name, value) { this[name] = value; }
   insertBefore(c) { return this.appendChild(c); }
   removeChild(c) { this.childNodes.splice(this.childNodes.indexOf(c), 1); }
   remove() { this.isConnected = false; }
@@ -43,7 +45,7 @@ function panel() {
     createElement: () => new Element(), createTextNode: text => ({ textContent: text }) };
   const window = { addEventListener() {} };
   const code = fs.readFileSync(path.join(root, 'media', 'panel.js'), 'utf8').replace('  post("ready");',
-    'window.hooks = {renderSettings,saveDirIfChanged,renderProgress,renderLog,ensureProgressCard,extractLoc,renderFix,requestFix,findingRows,startScanFromPanel,renderUi};');
+    'window.hooks = {renderSettings,saveDirIfChanged,renderProgress,renderLog,renderReport,renderStatus,showView,ensureProgressCard,extractLoc,renderFix,requestFix,findingRows,startScanFromPanel,renderUi};');
   vm.runInNewContext(code, { document, window, acquireVsCodeApi: () => ({ postMessage: m => sent.push(m) }) });
   const h = window.hooks, input = document.getElementById('sRtlDir');
   return { ...h, sent, document, elements, input,
@@ -97,6 +99,30 @@ test('progress uses the backend 0..100 scale and is clamped', () => {
   const p = panel(); p.renderProgress({ phase: 'starting' }); p.renderLog({ lines: [], progress: 60 });
   assert.equal(p.ensureProgressCard().fill.style.width, '60%');
   p.renderProgress({ progress: 200 }); assert.equal(p.ensureProgressCard().fill.style.width, '100%');
+});
+
+test('completed scan displays the report above runtime information and keeps logs collapsed', () => {
+  const p = panel();
+  p.renderProgress({ phase: 'starting' });
+  p.renderLog({ lines: ['[OK] started'], progress: 100 });
+  p.renderReport({ scan_id: 'scan-1', findings: [], summary: { total: 0, high: 0 }, autoExpand: false });
+  assert.equal(p.elements.get('results').childNodes[0].className, 'card report-card');
+  assert.equal(p.elements.get('progressArea').childNodes[0].className, 'card progress-card');
+  assert.equal(p.elements.get('logDetails').open, false);
+  assert.equal(p.elements.get('logSummary').textContent, '运行日志（1 行）');
+});
+
+test('connection settings have a separate view and duplicate warnings are grouped', () => {
+  const p = panel();
+  p.showView('settings');
+  assert.equal(p.elements.get('scanView').style.display, 'none');
+  assert.equal(p.elements.get('setBody').style.display, '');
+  p.showView('scan');
+  assert.equal(p.elements.get('scanView').style.display, '');
+  p.renderStatus({ level: 'warn', text: 'Neo4j unavailable' });
+  p.renderStatus({ level: 'warn', text: 'Neo4j unavailable' });
+  assert.equal(p.elements.get('notices').childNodes.length, 1);
+  assert.equal(p.elements.get('noticeSummary').textContent, '警告与提示（1 类警告）');
 });
 
 test('Windows evidence paths retain drive letters, spaces and Unicode', () => {

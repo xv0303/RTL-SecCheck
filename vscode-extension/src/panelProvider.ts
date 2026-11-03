@@ -798,9 +798,8 @@ export class CslRtlSeccheckPanelProvider implements vscode.WebviewViewProvider {
     session.state = "done";
     if (rep.rtl_dir) this.rtlDir = rep.rtl_dir;
 
-    // 报告数据整包推一次；autoExpand=false → 前端只渲染「报告就绪」提示条，
-    // 用户点「查看报告」后才铺开合并版报告卡（不再逐条弹 finding 卡）
-    this.post({ type: "data", kind: "report", payload: { ...rep, autoExpand: false } });
+    // 扫描完成立即展示报告摘要与明细，结果区始终排在运行信息前。
+    this.post({ type: "data", kind: "report", payload: { ...rep, autoExpand: true } });
 
     // 面板外联动：源码波浪线
     if (this.rtlDir) {

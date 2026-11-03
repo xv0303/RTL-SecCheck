@@ -24,6 +24,17 @@
   const $ = (id) => document.getElementById(id);
   const el = {
     flow: $("flow"),
+    scanView: $("scanView"),
+    scanTab: $("scanTab"),
+    settingsTab: $("settingsTab"),
+    results: $("results"),
+    progressArea: $("progressArea"),
+    notices: $("notices"),
+    settingsNotices: $("settingsNotices"),
+    noticeDetails: $("noticeDetails"),
+    noticeSummary: $("noticeSummary"),
+    logArea: $("logArea"),
+    logSummary: $("logSummary"),
     engineSel: $("engineSel"),
     depHint: $("depHint"),
     scanBtn: $("scanBtn"),
@@ -54,6 +65,19 @@
 
   /** 上一次轮询收到的日志行，用于增量追加（后端只回最后 40 行，超出会滑动） */
   let lastLogs = [];
+  const seenNotices = new Map();
+
+  function showView(view) {
+    const settings = view === "settings";
+    el.scanView.style.display = settings ? "none" : "";
+    el.setBody.style.display = settings ? "" : "none";
+    el.scanTab.classList.toggle("active", !settings);
+    el.settingsTab.classList.toggle("active", settings);
+    el.scanTab.setAttribute("aria-selected", String(!settings));
+    el.settingsTab.setAttribute("aria-selected", String(settings));
+  }
+  el.scanTab.addEventListener("click", () => showView("scan"));
+  el.settingsTab.addEventListener("click", () => showView("settings"));
 
   /** 最近一次 settings 推送（引擎下拉切换时刷新依赖提示用） */
   let lastSettings = {};
@@ -200,7 +224,8 @@
       case "fix":      renderFix(m.payload || {}); break;
       default: break; // 未知 kind 静默忽略（协议容错）
     }
-    scrollFlow();
+    if (m.kind === "report") el.flow.scrollTop = 0;
+    else if (m.kind !== "graph") scrollFlow();
   });
 
   /* ================================================================ *
@@ -214,7 +239,7 @@
    */
   function renderUi(m) {
     if (m && m.action === "toggleSettings") {
-      el.setBody.style.display = el.setBody.style.display === "none" ? "" : "none";
+      showView(el.setBody.style.display === "none" ? "settings" : "scan");
     }
     if (m && m.action === "startScan") startScanFromPanel();
   }
@@ -440,8 +465,7 @@
     updateSaveBtn();
     post("saveSettings", patch);
     // dirty 不在这里清：等宿主确认保存成功（settings 推送 saved===true）才清，
-    // 失败时改动仍标记为 dirty，再次打开设置卡可直接再点保存重试。这里只收起设置卡
-    el.setBody.style.display = "none";
+    // 保存结果留在连接设置页，便于直接查看校验状态或修改重试。
   });
 
   /* ================================================================ *
@@ -462,14 +486,20 @@
       updateSaveBtn();
     }
     // 目录静默保存失败（红卡）→ 解除防重，允许再次回车 / 失焦重试
-    let card = p.tag ? el.flow.querySelector('[data-status-tag="' + p.tag + '"]') : null;
+    const settingsNotice = p.tag === "savesettings";
+    const key = p.tag || `${p.level || "info"}:${p.text || ""}`;
+    let card = seenNotices.get(key);
     if (!card) {
       card = h("div", "card status-card" + (level ? " " + level : ""));
       if (p.tag) card.dataset.statusTag = p.tag;
-      el.flow.appendChild(card);
+      seenNotices.set(key, card);
+      (settingsNotice ? el.settingsNotices : el.notices).appendChild(card);
     } else {
       card.className = "card status-card" + (level ? " " + level : "");
     }
+    const warningCount = Array.from(seenNotices.values()).filter((n) => n.parentNode === el.notices && /\b(warn|error)\b/.test(n.className)).length;
+    el.noticeSummary.textContent = `警告与提示（${warningCount} 类警告）`;
+    if (p.level === "error" && !settingsNotice) el.noticeDetails.open = true;
     let pre = card.querySelector("pre");
     if (!pre) {
       pre = h("pre");
@@ -526,8 +556,8 @@
 
     card.appendChild(titleRow);
     card.appendChild(bar);
-    card.appendChild(logBox);
-    el.flow.appendChild(card);
+    el.progressArea.appendChild(card);
+    el.logArea.appendChild(logBox);
 
     progressCard = { card, spinner, title, cancel, fill, logBox };
     return progressCard;
@@ -538,6 +568,16 @@
     if (progressCard && progressCard.card.isConnected) progressCard.card.remove();
     progressCard = null;
     lastLogs = [];
+    while (el.logArea.firstChild) el.logArea.removeChild(el.logArea.firstChild);
+    el.logSummary.textContent = "运行日志（0 行）";
+    for (const [key, card] of seenNotices) {
+      if (card.parentNode === el.notices) seenNotices.delete(key);
+    }
+    while (el.notices.firstChild) el.notices.removeChild(el.notices.firstChild);
+    // 设置页的保存反馈与扫描会话无关，扫描重置时保留。
+    el.noticeDetails.open = false;
+    el.noticeSummary.textContent = "警告与提示（0 类警告）";
+    $("logDetails").open = false;
     clearReportUI();
     if (graphCard && graphCard.isConnected) graphCard.remove();
     graphCard = null;
@@ -625,6 +665,7 @@
       pc.logBox.appendChild(formatLogLine(String(raw)));
     }
     while (pc.logBox.childNodes.length > 200) pc.logBox.removeChild(pc.logBox.firstChild);
+    el.logSummary.textContent = `运行日志（${pc.logBox.childNodes.length} 行）`;
     pc.logBox.scrollTop = pc.logBox.scrollHeight;
   }
 
@@ -667,7 +708,7 @@
     });
     bar.appendChild(btn);
 
-    el.flow.appendChild(bar);
+    el.results.appendChild(bar);
     readyBar = bar;
   }
 
@@ -688,12 +729,7 @@
   function renderReport(rep) {
     const findings = Array.isArray(rep.findings) ? rep.findings : [];
 
-    // autoExpand=false：扫描完自动推的那份 → 只出「报告就绪」提示条，数据先存着
-    if (!rep.autoExpand) {
-      lastReport = rep;
-      renderReadyBar(rep);
-      return;
-    }
+    lastReport = rep;
 
     // 单例：重复查看时移除旧卡重画
     if (reportCard && reportCard.isConnected) reportCard.remove();
@@ -793,7 +829,7 @@
     }
 
     card.appendChild(body);
-    el.flow.appendChild(card);
+    el.results.appendChild(card);
 
     /* --- 筛选：主行和展开行成对显隐 --- */
     function applyFilter(filter) {
@@ -1113,7 +1149,8 @@
     card.appendChild(body);
     card.insertBefore(btn, body);
 
-    el.flow.appendChild(card);
+    el.results.appendChild(card);
+    card.scrollIntoView({ behavior: "smooth", block: "nearest" });
 
     /* --- 画布尺寸：跟着卡片实际宽度走 --- */
     const W = Math.max(220, Math.min(340, card.clientWidth - 22));

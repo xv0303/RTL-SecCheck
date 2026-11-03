@@ -44,6 +44,18 @@ body {
   overflow: hidden;
 }
 
+.view-tabs { display: flex; flex: 0 0 auto; border-bottom: 1px solid var(--border); padding: 0 10px; gap: 12px; }
+.view-tab { padding: 9px 3px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font: inherit; cursor: pointer; }
+.view-tab.active { border-bottom-color: var(--primary); color: var(--text); font-weight: 600; }
+.scan-view { display: flex; flex: 1 1 auto; flex-direction: column; min-height: 0; }
+.flow-section { display: flex; flex-direction: column; gap: 8px; }
+.section-heading { font-size: 12px; font-weight: 600; color: var(--muted); }
+.section-content { display: flex; flex-direction: column; gap: 9px; }
+.runtime-details { border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px; font-size: 11.5px; }
+.runtime-details summary { cursor: pointer; color: var(--muted); }
+.runtime-details[open] summary { margin-bottom: 7px; }
+.runtime-details .progress-log { max-height: 200px; }
+
 /* ---------------- 消息流（唯一滚动区） ----------------
    L1：固定在顶部操作条 / 设置卡之下，flex:1 吃掉剩余高度并独立滚动。
    min-height:0 是 flex 子项能真正滚动而不是被内容撑高的关键。
@@ -357,13 +369,13 @@ body {
    整体下推。max-height 兜底，避免矮面板时把消息流挤没。 */
 
 .settings-body {
-  flex: 0 0 auto;
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin: 0 10px 8px;
   padding: 8px 9px;
-  max-height: 50vh;
+  max-height: none;
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: 6px;

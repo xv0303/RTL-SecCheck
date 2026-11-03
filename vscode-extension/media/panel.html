@@ -9,6 +9,12 @@
 </head>
 <body>
 <div class="panel">
+  <nav class="view-tabs" aria-label="插件区域">
+    <button type="button" class="view-tab active" id="scanTab" aria-selected="true">安全检测</button>
+    <button type="button" class="view-tab" id="settingsTab" aria-selected="false">连接设置</button>
+  </nav>
+
+  <section class="scan-view" id="scanView">
 
   <!-- 固定头部（不随消息流滚动）：扫描目录 / 引擎 / 依赖提示 / 启动扫描。
        原来的底部操作条整体上移到顶部 -->
@@ -33,6 +39,26 @@
     <div class="dep-hint" id="depHint" style="display:none"></div>
     <button type="button" id="scanBtn" class="scan-btn">▶ 启动并扫描</button>
   </header>
+
+  <main class="flow" id="flow" aria-live="polite">
+    <section class="flow-section" aria-label="检测结果">
+      <h2 class="section-heading">检测结果</h2>
+      <div class="section-content" id="results"></div>
+    </section>
+    <section class="flow-section" aria-label="运行信息">
+      <h2 class="section-heading">运行信息</h2>
+      <div class="section-content" id="progressArea"></div>
+      <details class="runtime-details" id="noticeDetails">
+        <summary id="noticeSummary">警告与提示（0）</summary>
+        <div class="section-content" id="notices"></div>
+      </details>
+      <details class="runtime-details" id="logDetails">
+        <summary id="logSummary">运行日志（0）</summary>
+        <div id="logArea"></div>
+      </details>
+    </section>
+  </main>
+  </section>
 
   <!-- 「连接与扫描设置」卡：由视图标题栏齿轮（command cslRtlSeccheck.toggleSettings）
        经 H→W {type:"data",kind:"ui",action:"toggleSettings"} 控制开合。
@@ -69,10 +95,9 @@
       API Key。Key 须与后端 llm_model 指定的模型同一家（可在 backend/settings.json
       修改）。</div>
     <button type="button" id="setSave" class="set-save" disabled>保存设置</button>
+    <div class="section-content" id="settingsNotices" aria-live="polite"></div>
   </div>
 
-  <!-- 可滚动内容区：唯一滚动容器（进度卡 / 状态卡 / 报告就绪条 / 报告卡） -->
-  <main class="flow" id="flow" aria-live="polite"></main>
 
 </div>
 <script nonce="{{nonce}}" src="{{jsUri}}"></script>
